@@ -1,0 +1,3 @@
+platform,type,id,status,created_at,archive_at,title,updates_count,short_desc
+na1,incident,11938,,2025-11-04T19:59:54.244398+00:00,,,1,We're aware of a problem causing end of game issues and are working on a fix.
+na1,maintenance,11921,scheduled,2025-11-03T20:58:53.841743+00:00,2025-11-05T15:00:00+00:00,,1,"Mulai 16:30 WIB 05/11/2025, Mode Ranked akan dinonaktifkan untuk persiapan patch 15.22. Pada 18:00 WIB 05/11/2025, server akan dinonaktifkan. Semua game yang saat ini masih berjalan akan berakhir seri, dan stat tidak akan dicatat. Game tidak akan bisa dimainkan selama kurang lebih 4 jam."
