@@ -5,6 +5,14 @@ import requests
 # Optional: store your Riot API key in Lambda environment variable
 RIOT_API_KEY = os.environ.get("RIOT_API_KEY", "RGAPI-aea7e856-cbe8-4360-8284-089ac6523857")
 
+CORS_HEADERS = {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "OPTIONS,POST",
+}
+
+
 def lambda_handler(event, context):
     """
     AWS Lambda handler function.
@@ -15,6 +23,14 @@ def lambda_handler(event, context):
         "region": "ASIA"
     }
     """
+    # Handle CORS preflight requests
+    if event.get("httpMethod") == "OPTIONS":
+        return {
+            "statusCode": 200,
+            "headers": CORS_HEADERS,
+            "body": "",
+        }
+
     try:
         body = json.loads(event.get("body", "{}"))
 
@@ -30,7 +46,8 @@ def lambda_handler(event, context):
         if account_res.status_code != 200:
             return {
                 "statusCode": account_res.status_code,
-                "body": json.dumps({"error": "Failed to fetch Riot account", "details": account_res.text})
+                "headers": CORS_HEADERS,
+                "body": json.dumps({"error": "Failed to fetch Riot account", "details": account_res.text}),
             }
 
         puuid = account_res.json()["puuid"]
@@ -42,7 +59,8 @@ def lambda_handler(event, context):
         if match_res.status_code != 200:
             return {
                 "statusCode": match_res.status_code,
-                "body": json.dumps({"error": "Failed to fetch matches", "details": match_res.text})
+                "headers": CORS_HEADERS,
+                "body": json.dumps({"error": "Failed to fetch matches", "details": match_res.text}),
             }
 
         matches = match_res.json()
@@ -50,16 +68,17 @@ def lambda_handler(event, context):
         # Step 3: Return formatted response
         return {
             "statusCode": 200,
-            "headers": {"Content-Type": "application/json"},
+            "headers": CORS_HEADERS,
             "body": json.dumps({
                 "summoner": f"{game_name}#{tag_line}",
                 "region": region,
-                "matches": matches
-            })
+                "matches": matches,
+            }),
         }
 
     except Exception as e:
         return {
             "statusCode": 500,
-            "body": json.dumps({"error": str(e)})
+            "headers": CORS_HEADERS,
+            "body": json.dumps({"error": str(e)}),
         }
