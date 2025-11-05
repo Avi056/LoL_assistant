@@ -58,12 +58,7 @@ def lambda_handler(event, context):
 
     try:
         raw_body = event.get("body", "{}")
-
-        is_base64 = event.get("isBase64Encoded", False)
-        if isinstance(is_base64, str):
-            is_base64 = is_base64.lower() == "true"
-
-        if is_base64 and raw_body:
+        if event.get("isBase64Encoded"):
             raw_body = base64.b64decode(raw_body).decode("utf-8")
 
         body = json.loads(raw_body or "{}")
