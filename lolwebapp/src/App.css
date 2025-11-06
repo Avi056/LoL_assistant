@@ -25,9 +25,20 @@ body {
   font-family: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI",
     "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans",
     "Helvetica Neue", sans-serif;
-  background: radial-gradient(circle at top, rgba(79, 70, 229, 0.45), transparent),
-    radial-gradient(circle at 10% 80%, rgba(236, 72, 153, 0.35), transparent),
-    linear-gradient(145deg, var(--bg-start), var(--bg-end));
+  background-image: radial-gradient(
+      circle at top,
+      rgba(79, 70, 229, 0.45),
+      transparent
+    ), radial-gradient(
+      circle at 10% 80%,
+      rgba(236, 72, 153, 0.35),
+      transparent
+    ), linear-gradient(145deg, var(--bg-start), var(--bg-end)),
+    url("./assets/1184580-popular-league-of-legends-ashe-wallpaper-1920x1080-mac.jpg");
+  background-size: auto, auto, auto, cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-attachment: fixed;
   color: var(--text-primary);
   display: flex;
   align-items: stretch;
