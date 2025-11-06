@@ -85,7 +85,7 @@ def lambda_handler(event, context):
     # Keeping this branch is harmless if an OPTIONS slips through to Lambda.
     method = (
         event.get("httpMethod")
-        or event.get("requestContext", {}).get("http", {}).get("method")
+        or event.get("requestContext", {}).get("https", {}).get("method")
         or ""
     ).upper()
 
