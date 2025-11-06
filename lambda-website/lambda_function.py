@@ -7,18 +7,40 @@ import requests
 # Optional: store your Riot API key in Lambda environment variable
 RIOT_API_KEY = os.environ.get("RIOT_API_KEY", "RGAPI-aea7e856-cbe8-4360-8284-089ac6523857")
 
+_RAW_ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "").strip()
+ALLOWED_ORIGINS = [origin.strip() for origin in _RAW_ALLOWED_ORIGINS.split(",") if origin.strip()]
+
+
+def _resolve_cors_origin(origin):
+    """Return the origin that should be used for the CORS header."""
+
+    if not ALLOWED_ORIGINS:
+        return origin or "*"
+
+    if origin and origin in ALLOWED_ORIGINS:
+        return origin
+
+    if "*" in ALLOWED_ORIGINS:
+        return "*"
+
+    # Fallback to the first configured origin so the response still contains a header.
+    return ALLOWED_ORIGINS[0]
+
 
 def _build_cors_headers(event):
     """Generate CORS headers, reflecting the caller origin when available."""
     headers = event.get("headers") or {}
-    origin = headers.get("origin") or headers.get("Origin") or "*"
+    origin = headers.get("origin") or headers.get("Origin")
+
+    allowed_origin = _resolve_cors_origin(origin)
 
     return {
         "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": origin,
+        "Access-Control-Allow-Origin": allowed_origin,
         "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
         "Access-Control-Allow-Methods": "OPTIONS,POST",
         "Access-Control-Allow-Credentials": "false",
+        "Vary": "Origin",
     }
 
 
