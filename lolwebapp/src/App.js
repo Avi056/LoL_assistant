@@ -106,6 +106,81 @@ const SAMPLE_RECAP = {
   trendFocus: "Plays for late-game teamfights",
 };
 
+const buildShareSummary = (recap, winRate, kdaRatio) => {
+  const topMatch = recap.matchHistory[0];
+  const signaturePlay =
+    recap.highlightMoments[0]?.title || "Leaving unforgettable plays on the Rift";
+  const playstyle = recap.playstyleTags.slice(0, 2).join(" • ") || "Clutch performer";
+
+  const matchLine = topMatch
+    ? `${topMatch.result} as ${topMatch.champion} (${topMatch.kda})`
+    : "Stacking victories across the Rift";
+
+  return [
+    `${recap.summoner} • ${recap.regionLabel}`,
+    `Win rate ${winRate}% across ${recap.lastGamesCount} games`,
+    `Avg KDA ${kdaRatio}:1 · ${matchLine}`,
+    `Playstyle: ${playstyle}`,
+    `Highlight: ${signaturePlay}`,
+    "#LeagueOfLegends #ClutchMoments #RiftRecap",
+  ].join("\n");
+};
+
+const buildAiNarrative = (recap, winRate, kdaRatio) => {
+  const favoriteChamp = recap.matchHistory[0]?.champion ?? "their mains";
+  const streak = recap.kda.streak;
+  const standoutMoments = recap.highlightMoments
+    .map((moment) => `• ${moment.title} — ${moment.description}`)
+    .join("\n");
+  const tags = recap.playstyleTags.join(" · ");
+
+  return `✨ ${recap.summoner}'s Rift Wrapped ✨
+
+Across ${recap.lastGamesCount} games in ${recap.regionLabel}, ${
+    recap.summoner
+  } locked in a ${winRate}% win rate while averaging a ${kdaRatio}:1 KDA. The longest win streak hit ${
+    streak
+  } games, fueled by ${favoriteChamp} and razor-sharp late game instincts.
+
+Playstyle remix: ${tags}.
+
+Standout moments:
+${standoutMoments}
+
+Keep the energy high, queue up, and let the next chapter drop. 🎶🗡️`;
+};
+
+const copyTextToClipboard = async (text) => {
+  try {
+    if (
+      typeof navigator !== "undefined" &&
+      navigator.clipboard &&
+      typeof navigator.clipboard.writeText === "function"
+    ) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (error) {
+    // Fallback below
+  }
+
+  try {
+    if (typeof document === "undefined") return false;
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.setAttribute("readonly", "");
+    textArea.style.position = "absolute";
+    textArea.style.left = "-9999px";
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textArea);
+    return true;
+  } catch (fallbackError) {
+    return false;
+  }
+};
+
 const createRecapData = ({ summoner, regionLabel }) => ({
   summoner,
   regionLabel,
@@ -135,6 +210,9 @@ function App() {
   );
   const [showIntro, setShowIntro] = useState(true);
   const [animateApp, setAnimateApp] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState("");
+  const [recapNarrative, setRecapNarrative] = useState("");
+  const [isGeneratingRecap, setIsGeneratingRecap] = useState(false);
 
   useEffect(() => {
     const introTimer = setTimeout(() => {
@@ -150,6 +228,12 @@ function App() {
     const animationTimer = setTimeout(() => setAnimateApp(false), 700);
     return () => clearTimeout(animationTimer);
   }, [animateApp]);
+
+  useEffect(() => {
+    if (!shareFeedback) return undefined;
+    const timer = setTimeout(() => setShareFeedback(""), 2600);
+    return () => clearTimeout(timer);
+  }, [shareFeedback]);
 
   const regionDetails = useMemo(
     () => REGION_OPTIONS.find((option) => option.value === region),
@@ -173,6 +257,7 @@ function App() {
     );
     setView("recap");
     setAnimateApp(true);
+    setRecapNarrative("");
 
     /*
      * To restore the live API integration, re-enable the fetch logic below
@@ -207,6 +292,63 @@ function App() {
     (recapData.kda.kills + recapData.kda.assists) /
     Math.max(1, recapData.kda.deaths)
   ).toFixed(1);
+  const shareSummary = useMemo(
+    () => buildShareSummary(recapData, winRate, kdaRatio),
+    [recapData, winRate, kdaRatio]
+  );
+
+  const handleShare = async (platform) => {
+    if (typeof window === "undefined") return;
+
+    const encodedSummary = encodeURIComponent(shareSummary);
+    const encodedTitle = encodeURIComponent(
+      `${recapData.summoner} — ${recapData.regionLabel} recap`
+    );
+
+    switch (platform) {
+      case "twitter": {
+        const url = `https://twitter.com/intent/tweet?text=${encodedSummary}`;
+        window.open(url, "_blank", "noopener,noreferrer");
+        setShareFeedback("Opened a ready-to-post Tweet in a new tab.");
+        break;
+      }
+      case "reddit": {
+        const url = `https://www.reddit.com/submit?title=${encodedTitle}&text=${encodedSummary}`;
+        window.open(url, "_blank", "noopener,noreferrer");
+        setShareFeedback("Reddit share drafted in a new tab.");
+        break;
+      }
+      case "instagram": {
+        const copied = await copyTextToClipboard(shareSummary);
+        if (copied) {
+          setShareFeedback("Caption copied. Paste it into your Instagram story or post.");
+        } else {
+          setShareFeedback("Unable to copy automatically—select and copy the caption manually.");
+        }
+        window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
+        break;
+      }
+      case "copy": {
+        const copied = await copyTextToClipboard(shareSummary);
+        setShareFeedback(
+          copied ? "Recap copied to clipboard." : "Copy failed. Please copy manually."
+        );
+        break;
+      }
+      default:
+        break;
+    }
+  };
+
+  const handleGenerateRecap = () => {
+    if (isGeneratingRecap) return;
+    setIsGeneratingRecap(true);
+
+    setTimeout(() => {
+      setRecapNarrative(buildAiNarrative(recapData, winRate, kdaRatio));
+      setIsGeneratingRecap(false);
+    }, 1400);
+  };
 
   return (
     <div className="app-shell">
@@ -470,15 +612,77 @@ function App() {
                   </p>
                 </div>
                 <div className="share-card__actions">
-                  <button type="button" className="primary-button">
-                    Share recap
-                  </button>
+                  <div className="share-card__buttons">
+                    <button
+                      type="button"
+                      className="share-button share-button--twitter"
+                      onClick={() => handleShare("twitter")}
+                    >
+                      Tweet recap
+                    </button>
+                    <button
+                      type="button"
+                      className="share-button share-button--instagram"
+                      onClick={() => handleShare("instagram")}
+                    >
+                      Instagram caption
+                    </button>
+                    <button
+                      type="button"
+                      className="share-button share-button--reddit"
+                      onClick={() => handleShare("reddit")}
+                    >
+                      Share to Reddit
+                    </button>
+                    <button
+                      type="button"
+                      className="share-button share-button--copy"
+                      onClick={() => handleShare("copy")}
+                    >
+                      Copy recap
+                    </button>
+                  </div>
+                  {shareFeedback && (
+                    <p className="share-card__feedback">{shareFeedback}</p>
+                  )}
                   <div className="share-card__meta">
                     <span className="social-pill">#LeagueOfLegends</span>
                     <span className="social-pill">#ClutchMoments</span>
                   </div>
                 </div>
               </aside>
+
+              <article className="ai-card">
+                <header className="ai-card__header">
+                  <h2>Spotify Wrapped-style recap</h2>
+                  <p>
+                    Generate an AI-written story beat that captures your vibe on
+                    the Rift. Perfect for captions, reels, or keeping the hype
+                    rolling into the next queue.
+                  </p>
+                </header>
+                <textarea
+                  className="ai-card__textarea"
+                  rows={8}
+                  value={recapNarrative}
+                  placeholder="Tap Generate Recap to create your personalized narrative."
+                  onChange={(event) => setRecapNarrative(event.target.value)}
+                />
+                <div className="ai-card__actions">
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={handleGenerateRecap}
+                    disabled={isGeneratingRecap}
+                  >
+                    {isGeneratingRecap ? "Summoning AI…" : "Generate Recap"}
+                  </button>
+                  <span className="ai-card__hint">
+                    Powered by AWS Bedrock-style storytelling using your latest
+                    performance.
+                  </span>
+                </div>
+              </article>
             </section>
           )}
         </div>
