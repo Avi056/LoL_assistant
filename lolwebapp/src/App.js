@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import introImage from "./assets/1568742297124374.jpeg";
 
@@ -221,6 +221,12 @@ function App() {
   const [shareFeedback, setShareFeedback] = useState("");
   const [recapNarrative, setRecapNarrative] = useState("");
   const [isGeneratingRecap, setIsGeneratingRecap] = useState(false);
+  const [matches, setMatches] = useState([]);
+  const [summonerLabel, setSummonerLabel] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [copyFeedback, setCopyFeedback] = useState("");
+  const copyTimeoutRef = useRef(null);
 
   useEffect(() => {
     const introTimer = setTimeout(() => {
@@ -242,6 +248,12 @@ function App() {
     const timer = setTimeout(() => setShareFeedback(""), 2600);
     return () => clearTimeout(timer);
   }, [shareFeedback]);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
 
   const regionDetails = useMemo(
     () => REGION_OPTIONS.find((option) => option.value === region),
@@ -267,7 +279,7 @@ function App() {
     [recapData, winRate, kdaRatio]
   );
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     const trimmedName = gameName.trim();
@@ -276,15 +288,65 @@ function App() {
 
     const regionLabel = regionDetails?.label ?? region;
 
-    setRecapData(
-      createRecapData({
-        summoner: `${trimmedName}#${trimmedTag}`,
-        regionLabel,
-      })
-    );
-    setRecapNarrative("");
-    setView("recap");
-    setAnimateApp(true);
+    setLoading(true);
+    setError(null);
+    setMatches([]);
+    setSummonerLabel("");
+    setCopyFeedback("");
+
+    try {
+      const response = await fetch(
+        "https://fiauf5t7o7.execute-api.us-east-1.amazonaws.com/InitialStage/matches",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            game_name: trimmedName,
+            tag_line: trimmedTag,
+            region,
+          }),
+        }
+      );
+
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch {
+        // non-JSON response
+      }
+
+      if (!response.ok) {
+        const message =
+          payload?.error ||
+          `Request failed with status ${response.status}. Please try again.`;
+        throw new Error(message);
+      }
+
+      if (!payload?.matches?.length) {
+        setSummonerLabel(payload?.summoner || `${trimmedName}#${trimmedTag}`);
+        setError("No matches found for this Riot ID.");
+        return;
+      }
+
+      setMatches(payload.matches);
+      setSummonerLabel(payload.summoner ?? `${trimmedName}#${trimmedTag}`);
+      setRecapData(
+        createRecapData({
+          summoner: `${trimmedName}#${trimmedTag}`,
+          regionLabel,
+        })
+      );
+      setRecapNarrative("");
+      setView("recap");
+      setAnimateApp(true);
+    } catch (requestError) {
+      setError(
+        requestError?.message ||
+          "Something went wrong while fetching matches."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleBackToLookup = () => {
@@ -343,6 +405,15 @@ function App() {
       setRecapNarrative(buildAiNarrative(recapData, winRate, Number(kdaRatio)));
       setIsGeneratingRecap(false);
     }, 1400);
+  };
+
+  const handleCopy = async (matchId) => {
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    const copied = await copyTextToClipboard(matchId);
+    setCopyFeedback(
+      copied ? `Copied ${matchId}` : "Copy failed. Please copy manually."
+    );
+    copyTimeoutRef.current = setTimeout(() => setCopyFeedback(""), 2000);
   };
 
   return (
@@ -416,11 +487,16 @@ function App() {
                 </div>
 
                 <div className="form-actions">
-                  <button className="primary-button" type="submit">
-                    Fetch matches
+                  <button
+                    className="primary-button"
+                    type="submit"
+                    disabled={loading}
+                  >
+                    {loading ? "Fetching matches…" : "Fetch matches"}
                   </button>
                 </div>
               </form>
+              {error && <div className="alert alert--error">{error}</div>}
             </main>
           ) : (
             <section className="recap">
@@ -726,6 +802,44 @@ function App() {
                   </div>
                 </div>
               </aside>
+
+              <div className="matches">
+                <div className="matches__header">
+                  <h2>Live match IDs</h2>
+                  {summonerLabel && (
+                    <p className="matches__meta">
+                      Showing latest games for <strong>{summonerLabel}</strong>
+                    </p>
+                  )}
+                </div>
+
+                {matches.length > 0 ? (
+                  <ul className="matches__grid">
+                    {matches.map((matchId, index) => (
+                      <li key={matchId} className="match-card">
+                        <div className="match-card__content">
+                          <span className="match-card__index">#{index + 1}</span>
+                          <p className="match-card__id">{matchId}</p>
+                        </div>
+                        <button
+                          type="button"
+                          className="match-card__action"
+                          onClick={() => handleCopy(matchId)}
+                        >
+                          Copy ID
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="empty-state">
+                    Fetch matches to populate live IDs from the Riot API.
+                  </p>
+                )}
+                {copyFeedback && (
+                  <div className="alert alert--success">{copyFeedback}</div>
+                )}
+              </div>
             </section>
           )}
         </div>
