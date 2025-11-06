@@ -2,21 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 
 const REGION_OPTIONS = [
-  {
-    value: "ASIA",
-    label: "Asia",
-    description: "KR, JP, OCE, PH, SG",
-  },
-  {
-    value: "AMERICAS",
-    label: "Americas",
-    description: "NA, BR, LAN, LAS",
-  },
-  {
-    value: "EUROPE",
-    label: "Europe",
-    description: "EUW, EUNE, TR, RU",
-  },
+  { value: "ASIA", label: "Asia", description: "KR, JP, OCE, PH, SG" },
+  { value: "AMERICAS", label: "Americas", description: "NA, BR, LAN, LAS" },
+  { value: "EUROPE", label: "Europe", description: "EUW, EUNE, TR, RU" },
 ];
 
 function App() {
@@ -32,9 +20,7 @@ function App() {
 
   useEffect(() => {
     return () => {
-      if (copyTimeoutRef.current) {
-        clearTimeout(copyTimeoutRef.current);
-      }
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
     };
   }, []);
 
@@ -44,10 +30,7 @@ function App() {
   );
 
   const handleCopy = async (matchId) => {
-    if (copyTimeoutRef.current) {
-      clearTimeout(copyTimeoutRef.current);
-    }
-
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
     try {
       const canUseClipboard =
         typeof navigator !== "undefined" &&
@@ -58,10 +41,7 @@ function App() {
       if (canUseClipboard) {
         await navigator.clipboard.writeText(matchId);
         setCopyFeedback(`Copied ${matchId}`);
-      } else if (
-        typeof document !== "undefined" &&
-        typeof document.execCommand === "function"
-      ) {
+      } else {
         const textArea = document.createElement("textarea");
         textArea.value = matchId;
         textArea.setAttribute("readonly", "");
@@ -72,14 +52,11 @@ function App() {
         document.execCommand("copy");
         document.body.removeChild(textArea);
         setCopyFeedback(`Copied ${matchId}`);
-      } else {
-        setCopyFeedback("Copy failed. Please copy manually.");
       }
     } catch (copyError) {
       console.error(copyError);
       setCopyFeedback("Copy failed. Please copy manually.");
     }
-
     copyTimeoutRef.current = setTimeout(() => setCopyFeedback(""), 2000);
   };
 
@@ -93,12 +70,10 @@ function App() {
 
     try {
       const response = await fetch(
-        "https://fiauf5t7o7.execute-api.us-east-1.amazonaws.com/prod/matches",
+        "https://fiauf5t7o7.execute-api.us-east-1.amazonaws.com/InitialStage/matches",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             game_name: gameName.trim(),
             tag_line: tagLine.trim(),
@@ -110,7 +85,7 @@ function App() {
       let payload = null;
       try {
         payload = await response.json();
-      } catch (jsonError) {
+      } catch {
         // Non-JSON response
       }
 
@@ -145,9 +120,9 @@ function App() {
         <div className="card__header">
           <h1 className="title">League of Legends Match Explorer</h1>
           <p className="subtitle">
-            Enter a Riot ID to pull the five most recent matches straight from the
-            Riot Games API. Perfect for scouting opponents or reviewing your own
-            performance.
+            Enter a Riot ID to pull the five most recent matches straight from
+            the Riot Games API. Perfect for scouting opponents or reviewing your
+            own performance.
           </p>
         </div>
 
@@ -162,7 +137,7 @@ function App() {
                 type="text"
                 placeholder="Summoner (e.g. Faker)"
                 value={gameName}
-                onChange={(event) => setGameName(event.target.value)}
+                onChange={(e) => setGameName(e.target.value)}
                 required
               />
               <span className="riot-id__separator">#</span>
@@ -171,7 +146,7 @@ function App() {
                 type="text"
                 placeholder="Tag (e.g. KR1)"
                 value={tagLine}
-                onChange={(event) => setTagLine(event.target.value)}
+                onChange={(e) => setTagLine(e.target.value)}
                 required
               />
             </div>
@@ -185,7 +160,7 @@ function App() {
               <select
                 id="region"
                 value={region}
-                onChange={(event) => setRegion(event.target.value)}
+                onChange={(e) => setRegion(e.target.value)}
               >
                 {REGION_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -250,8 +225,8 @@ function App() {
 
           {!loading && matches.length === 0 && !error && (
             <p className="empty-state">
-              No matches yet. Enter a Riot ID above and press <strong>Fetch
-              matches</strong> to get started.
+              No matches yet. Enter a Riot ID above and press{" "}
+              <strong>Fetch matches</strong> to get started.
             </p>
           )}
         </section>
