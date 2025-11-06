@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 import introImage from "./assets/1568742297124374.jpeg";
 
@@ -8,16 +8,131 @@ const REGION_OPTIONS = [
   { value: "EUROPE", label: "Europe", description: "EUW, EUNE, TR, RU" },
 ];
 
+const SAMPLE_RECAP = {
+  winDistribution: [
+    { label: "Wins", value: 18 },
+    { label: "Losses", value: 6 },
+    { label: "Remakes", value: 1 },
+  ],
+  kda: {
+    kills: 9.4,
+    deaths: 3.1,
+    assists: 11.7,
+    streak: 7,
+    csPerMin: 7.3,
+    goldPerMin: 420,
+  },
+  matchHistory: [
+    {
+      id: "NA1-5234509821",
+      champion: "Ashe",
+      role: "Bot",
+      result: "Win",
+      kda: "12 / 1 / 14",
+      csPerMin: 8.5,
+      damage: "31.8k dmg",
+      duration: "32:18",
+      highlightTag: "Quadra kill",
+    },
+    {
+      id: "NA1-5234402719",
+      champion: "Kai'Sa",
+      role: "Bot",
+      result: "Win",
+      kda: "9 / 2 / 10",
+      csPerMin: 7.9,
+      damage: "28.4k dmg",
+      duration: "29:42",
+      highlightTag: "Clutch steal",
+    },
+    {
+      id: "NA1-5234301184",
+      champion: "Caitlyn",
+      role: "Bot",
+      result: "Loss",
+      kda: "6 / 5 / 7",
+      csPerMin: 7.1,
+      damage: "24.6k dmg",
+      duration: "34:05",
+      highlightTag: "Siege expert",
+    },
+    {
+      id: "NA1-5234205617",
+      champion: "Ashe",
+      role: "Bot",
+      result: "Win",
+      kda: "8 / 1 / 13",
+      csPerMin: 7.5,
+      damage: "26.9k dmg",
+      duration: "27:33",
+      highlightTag: "MVP",
+    },
+    {
+      id: "NA1-5234100032",
+      champion: "Jhin",
+      role: "Bot",
+      result: "Win",
+      kda: "11 / 3 / 9",
+      csPerMin: 6.8,
+      damage: "25.1k dmg",
+      duration: "31:11",
+      highlightTag: "Ace closer",
+    },
+  ],
+  playstyleTags: [
+    "Aggressive Marksman",
+    "Objective Hunter",
+    "Vision Controller",
+    "Teamfight Anchor",
+  ],
+  highlightMoments: [
+    {
+      title: "Arrow that flipped the Baron fight",
+      description:
+        "28:45 — Crystal Arrow snipes the enemy jungler, turning a 4v5 Baron into a clean ace.",
+    },
+    {
+      title: "Perfect vision lockdown",
+      description:
+        "Averaged 5.4 control wards per game, denying 73% of enemy ward placements around objectives.",
+    },
+    {
+      title: "Impeccable kiting finish",
+      description:
+        "Final Elder stand showcased flawless kiting with two resets and a secure objective.",
+    },
+  ],
+  lastGamesCount: 10,
+  trendFocus: "Plays for late-game teamfights",
+};
+
+const createRecapData = ({ summoner, regionLabel }) => ({
+  summoner,
+  regionLabel,
+  winDistribution: SAMPLE_RECAP.winDistribution.map((segment) => ({
+    ...segment,
+  })),
+  kda: { ...SAMPLE_RECAP.kda },
+  matchHistory: SAMPLE_RECAP.matchHistory.map((match) => ({ ...match })),
+  playstyleTags: [...SAMPLE_RECAP.playstyleTags],
+  highlightMoments: SAMPLE_RECAP.highlightMoments.map((moment) => ({
+    ...moment,
+  })),
+  lastGamesCount: SAMPLE_RECAP.lastGamesCount,
+  trendFocus: SAMPLE_RECAP.trendFocus,
+});
+
 function App() {
   const [gameName, setGameName] = useState("");
   const [tagLine, setTagLine] = useState("");
   const [region, setRegion] = useState(REGION_OPTIONS[0].value);
-  const [matches, setMatches] = useState([]);
-  const [summonerLabel, setSummonerLabel] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [copyFeedback, setCopyFeedback] = useState("");
-  const copyTimeoutRef = useRef(null);
+  const [view, setView] = useState("form");
+  const [recapData, setRecapData] = useState(() =>
+    createRecapData({
+      summoner: "Summoner#TAG",
+      regionLabel: REGION_OPTIONS[0].label,
+    })
+  );
   const [showIntro, setShowIntro] = useState(true);
   const [animateApp, setAnimateApp] = useState(false);
 
@@ -25,7 +140,7 @@ function App() {
     const introTimer = setTimeout(() => {
       setShowIntro(false);
       setAnimateApp(true);
-    }, 5000);
+    }, 3000);
 
     return () => clearTimeout(introTimer);
   }, []);
@@ -36,101 +151,62 @@ function App() {
     return () => clearTimeout(animationTimer);
   }, [animateApp]);
 
-  useEffect(() => {
-    return () => {
-      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
-    };
-  }, []);
-
   const regionDetails = useMemo(
     () => REGION_OPTIONS.find((option) => option.value === region),
     [region]
   );
 
-  const handleCopy = async (matchId) => {
-    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
-    try {
-      const canUseClipboard =
-        typeof navigator !== "undefined" &&
-        navigator.clipboard &&
-        typeof window !== "undefined" &&
-        window.isSecureContext;
-
-      if (canUseClipboard) {
-        await navigator.clipboard.writeText(matchId);
-        setCopyFeedback(`Copied ${matchId}`);
-      } else {
-        const textArea = document.createElement("textarea");
-        textArea.value = matchId;
-        textArea.setAttribute("readonly", "");
-        textArea.style.position = "absolute";
-        textArea.style.left = "-9999px";
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textArea);
-        setCopyFeedback(`Copied ${matchId}`);
-      }
-    } catch (copyError) {
-      console.error(copyError);
-      setCopyFeedback("Copy failed. Please copy manually.");
-    }
-    copyTimeoutRef.current = setTimeout(() => setCopyFeedback(""), 2000);
-  };
-
-  const fetchMatches = async (event) => {
+  const handleSubmit = (event) => {
     event.preventDefault();
-    setLoading(true);
-    setError(null);
-    setMatches([]);
-    setSummonerLabel("");
-    setCopyFeedback("");
 
-    try {
-      const response = await fetch(
-        "https://fiauf5t7o7.execute-api.us-east-1.amazonaws.com/InitialStage/matches",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            game_name: gameName.trim(),
-            tag_line: tagLine.trim(),
-            region,
-          }),
-        }
-      );
+    const trimmedName = gameName.trim();
+    const trimmedTag = tagLine.trim();
+    if (!trimmedName || !trimmedTag) return;
 
-      let payload = null;
-      try {
-        payload = await response.json();
-      } catch {
-        // Non-JSON response
-      }
+    const regionLabel = regionDetails?.label ?? region;
 
-      if (!response.ok) {
-        const message =
-          payload?.error ||
-          `Request failed with status ${response.status}. Please try again.`;
-        throw new Error(message);
-      }
+    setRecapData(
+      createRecapData({
+        summoner: `${trimmedName}#${trimmedTag}`,
+        regionLabel,
+      })
+    );
+    setView("recap");
+    setAnimateApp(true);
 
-      if (!payload?.matches?.length) {
-        setMatches([]);
-        setSummonerLabel(payload?.summoner || "");
-        setError("No matches found for this Riot ID.");
-        return;
-      }
-
-      setMatches(payload.matches);
-      setSummonerLabel(payload.summoner ?? "");
-    } catch (requestError) {
-      setError(
-        requestError?.message || "Something went wrong while fetching matches."
-      );
-    } finally {
-      setLoading(false);
-    }
+    /*
+     * To restore the live API integration, re-enable the fetch logic below
+     * and wire the response into the recap view instead of the sample data.
+     *
+     * try {
+     *   const response = await fetch("https://your-api-here", { ... });
+     *   const payload = await response.json();
+     *   // setRecapData(transformPayload(payload));
+     * } catch (error) {
+     *   console.error(error);
+     * }
+     */
   };
+
+  const handleBackToLookup = () => {
+    setView("form");
+    setAnimateApp(true);
+  };
+
+  const totalGames = recapData.winDistribution.reduce(
+    (acc, segment) => acc + segment.value,
+    0
+  );
+  const winsSegment = recapData.winDistribution.find(
+    (segment) => segment.label === "Wins"
+  );
+  const winRate = totalGames
+    ? Math.round(((winsSegment?.value ?? 0) / totalGames) * 100)
+    : 0;
+  const kdaRatio = (
+    (recapData.kda.kills + recapData.kda.assists) /
+    Math.max(1, recapData.kda.deaths)
+  ).toFixed(1);
 
   return (
     <div className="app-shell">
@@ -146,123 +222,265 @@ function App() {
 
       {!showIntro && (
         <div className={`app ${animateApp ? "app--enter" : ""}`}>
-          <main className="card">
-            <div className="card__header">
-              <h1 className="title">League of Legends Match Explorer</h1>
-              <p className="subtitle">
-                Enter a Riot ID to pull the five most recent matches straight
-                from the Riot Games API. Perfect for scouting opponents or
-                reviewing your own performance.
-              </p>
-            </div>
-
-            <form className="form" onSubmit={fetchMatches}>
-              <div className="field-group">
-                <label className="field-label" htmlFor="riot-name">
-                  Riot ID
-                </label>
-                <div className="riot-id">
-                  <input
-                    id="riot-name"
-                    type="text"
-                    placeholder="Summoner (e.g. Faker)"
-                    value={gameName}
-                    onChange={(e) => setGameName(e.target.value)}
-                    required
-                  />
-                  <span className="riot-id__separator">#</span>
-                  <input
-                    id="riot-tag"
-                    type="text"
-                    placeholder="Tag (e.g. KR1)"
-                    value={tagLine}
-                    onChange={(e) => setTagLine(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="field-group">
-                <label className="field-label" htmlFor="region">
-                  Region
-                </label>
-                <div className="select-wrapper">
-                  <select
-                    id="region"
-                    value={region}
-                    onChange={(e) => setRegion(e.target.value)}
-                  >
-                    {REGION_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label} · {option.description}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="form-actions">
-                <button type="submit" disabled={loading}>
-                  {loading ? "Fetching matches…" : "Fetch matches"}
-                </button>
-                <p className="region-hint">
-                  Querying: <strong>{regionDetails?.label}</strong> servers
+          {view === "form" ? (
+            <main className="card card--compact">
+              <div className="card__header">
+                <h1 className="title">League of Legends Match Explorer</h1>
+                <p className="subtitle">
+                  Lock in your Riot ID and region to preview the new recap
+                  experience while the live data pipeline is under
+                  construction.
                 </p>
               </div>
-            </form>
 
-            {error && <div className="alert alert--error">{error}</div>}
-            {!error && copyFeedback && (
-              <div className="alert alert--success">{copyFeedback}</div>
-            )}
+              <form className="form" onSubmit={handleSubmit}>
+                <div className="field-group">
+                  <label className="field-label" htmlFor="riot-name">
+                    Riot ID
+                  </label>
+                  <div className="riot-id">
+                    <input
+                      id="riot-name"
+                      type="text"
+                      placeholder="Summoner (e.g. Faker)"
+                      value={gameName}
+                      onChange={(e) => setGameName(e.target.value)}
+                      required
+                    />
+                    <span className="riot-id__separator">#</span>
+                    <input
+                      id="riot-tag"
+                      type="text"
+                      placeholder="Tag (e.g. KR1)"
+                      value={tagLine}
+                      onChange={(e) => setTagLine(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
 
-            <section className="matches">
-              <div className="matches__header">
-                <h2>Recent matches</h2>
-                {summonerLabel && (
-                  <p className="matches__meta">
-                    Showing latest games for <strong>{summonerLabel}</strong>
+                <div className="field-group">
+                  <label className="field-label" htmlFor="region">
+                    Region
+                  </label>
+                  <div className="select-wrapper">
+                    <select
+                      id="region"
+                      value={region}
+                      onChange={(e) => setRegion(e.target.value)}
+                    >
+                      {REGION_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label} · {option.description}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-actions">
+                  <button className="primary-button" type="submit">
+                    Fetch matches
+                  </button>
+                </div>
+              </form>
+            </main>
+          ) : (
+            <section className="recap">
+              <div className="recap__banner">
+                <div>
+                  <p className="recap__eyebrow">Personalized recap</p>
+                  <h1 className="recap__title">{recapData.summoner}</h1>
+                  <p className="recap__meta">
+                    {recapData.regionLabel} · Last {recapData.lastGamesCount}{" "}
+                    games
                   </p>
-                )}
+                </div>
+                <button
+                  type="button"
+                  className="ghost-button"
+                  onClick={handleBackToLookup}
+                >
+                  Back to lookup
+                </button>
               </div>
 
-              {loading && (
-                <div className="loading">
-                  <span className="loading__spinner" aria-hidden />
-                  <span>Contacting the Rift…</span>
-                </div>
-              )}
-
-              {!loading && matches.length > 0 && (
-                <ul className="matches__grid">
-                  {matches.map((matchId, index) => (
-                    <li key={matchId} className="match-card">
-                      <div className="match-card__content">
-                        <span className="match-card__index">
-                          #{index + 1}
+              <div className="stat-grid">
+                <article className="stat-card">
+                  <header className="stat-card__header">
+                    <h2>Win Distribution</h2>
+                    <span className="stat-card__sub">Win rate {winRate}%</span>
+                  </header>
+                  <div className="win-bar">
+                    {recapData.winDistribution.map((segment) => (
+                      <span
+                        key={segment.label}
+                        className={`win-bar__segment win-bar__segment--${segment.label.toLowerCase()}`}
+                        style={{
+                          width: totalGames
+                            ? `${Math.max(
+                                6,
+                                (segment.value / totalGames) * 100
+                              )}%`
+                            : "0%",
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <ul className="win-legend">
+                    {recapData.winDistribution.map((segment) => (
+                      <li key={segment.label}>
+                        <span
+                          className={`win-legend__swatch win-legend__swatch--${segment.label.toLowerCase()}`}
+                        />
+                        <span className="win-legend__label">
+                          {segment.label}
                         </span>
-                        <p className="match-card__id">{matchId}</p>
-                      </div>
-                      <button
-                        type="button"
-                        className="match-card__action"
-                        onClick={() => handleCopy(matchId)}
-                      >
-                        Copy ID
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                        <span className="win-legend__value">
+                          {segment.value} games
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </article>
 
-              {!loading && matches.length === 0 && !error && (
-                <p className="empty-state">
-                  No matches yet. Enter a Riot ID above and press{" "}
-                  <strong>Fetch matches</strong> to get started.
-                </p>
-              )}
+                <article className="stat-card">
+                  <header className="stat-card__header">
+                    <h2>KDA Breakdown</h2>
+                    <span className="stat-card__sub">
+                      Average {kdaRatio}:1 across recent games
+                    </span>
+                  </header>
+                  <div className="kda-figure">{kdaRatio}:1</div>
+                  <div className="kda-breakdown">
+                    <div>
+                      <span>Avg Kills</span>
+                      <strong>{recapData.kda.kills.toFixed(1)}</strong>
+                    </div>
+                    <div>
+                      <span>Avg Deaths</span>
+                      <strong>{recapData.kda.deaths.toFixed(1)}</strong>
+                    </div>
+                    <div>
+                      <span>Avg Assists</span>
+                      <strong>{recapData.kda.assists.toFixed(1)}</strong>
+                    </div>
+                  </div>
+                  <div className="kda-tags">
+                    <span className="accent-chip">
+                      Longest win streak: {recapData.kda.streak}
+                    </span>
+                    <span className="accent-chip">
+                      CS / min: {recapData.kda.csPerMin.toFixed(1)}
+                    </span>
+                    <span className="accent-chip">
+                      Gold / min: {recapData.kda.goldPerMin}
+                    </span>
+                  </div>
+                </article>
+
+                <article className="stat-card stat-card--tags">
+                  <header className="stat-card__header">
+                    <h2>Playstyle Tags</h2>
+                    <span className="stat-card__sub">
+                      {recapData.trendFocus}
+                    </span>
+                  </header>
+                  <div className="pill-row">
+                    {recapData.playstyleTags.map((tag) => (
+                      <span key={tag} className="pill">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="stat-card__note">
+                    Tags refresh each batch of games to reflect your evolving
+                    macro, mechanics, and team impact.
+                  </p>
+                </article>
+              </div>
+
+              <div className="recap__body">
+                <article className="history-card">
+                  <header className="history-card__header">
+                    <h2>Match History</h2>
+                    <span>Last {recapData.lastGamesCount} games</span>
+                  </header>
+                  <ul className="history-list">
+                    {recapData.matchHistory.map((match) => (
+                      <li key={match.id} className="history-item">
+                        <div className="history-item__top">
+                          <span
+                            className={`history-item__result history-item__result--${match.result.toLowerCase()}`}
+                          >
+                            {match.result}
+                          </span>
+                          <span className="history-item__id">{match.id}</span>
+                        </div>
+                        <div className="history-item__row">
+                          <span className="history-item__champion">
+                            {match.champion} · {match.role}
+                          </span>
+                          <span className="history-item__kda">
+                            {match.kda} KDA
+                          </span>
+                        </div>
+                        <div className="history-item__row history-item__row--meta">
+                          <span>{match.damage}</span>
+                          <span>{match.csPerMin.toFixed(1)} CS / min</span>
+                          <span>{match.duration}</span>
+                        </div>
+                        {match.highlightTag && (
+                          <span className="history-item__badge">
+                            {match.highlightTag}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+
+                <article className="moments-card">
+                  <header className="moments-card__header">
+                    <h2>Highlight Moments</h2>
+                    <span>Season-defining plays</span>
+                  </header>
+                  <ul className="highlight-list">
+                    {recapData.highlightMoments.map((moment, index) => (
+                      <li key={moment.title} className="highlight-item">
+                        <span className="highlight-item__index">
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+                        <div className="highlight-item__body">
+                          <h3>{moment.title}</h3>
+                          <p>{moment.description}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              </div>
+
+              <aside className="share-card">
+                <div>
+                  <h2>Share your recap</h2>
+                  <p>
+                    Spotlight your climb with a ready-to-post graphic for X or
+                    Instagram, complete with standout stats and moments.
+                  </p>
+                </div>
+                <div className="share-card__actions">
+                  <button type="button" className="primary-button">
+                    Share recap
+                  </button>
+                  <div className="share-card__meta">
+                    <span className="social-pill">#LeagueOfLegends</span>
+                    <span className="social-pill">#ClutchMoments</span>
+                  </div>
+                </div>
+              </aside>
             </section>
-          </main>
+          )}
         </div>
       )}
     </div>
