@@ -4,13 +4,11 @@ import os
 import requests
 
 # --- Environment variables ---
-# Set these in the Lambda Console → Configuration → Environment variables
-RIOT_API_KEY = os.environ.get("RIOT_API_KEY")
-CUSTOM_API_KEY = os.environ.get("CUSTOM_API_KEY")  # optional shared key for your frontend
+RIOT_API_KEY = "RGAPI-aea7e856-cbe8-4360-8284-089ac6523857"
 
 # Allowed frontend origins (comma-separated string)
 _RAW_ALLOWED_ORIGINS = (os.environ.get("ALLOWED_ORIGINS") or "").strip()
-ALLOWED_ORIGINS = [o.strip() for o in _RAW_ALLOWED_ORIGINS.split(",") if o.strip()]
+ALLOWED_ORIGINS = ["https://main.dmmttg0yma1yv.amplifyapp.com"]
 
 
 # ---------- CORS helpers ----------
