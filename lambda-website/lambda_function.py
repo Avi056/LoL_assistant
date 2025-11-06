@@ -4,7 +4,8 @@ import os
 import requests
 
 # --- Environment variables ---
-RIOT_API_KEY = os.environ.get("RIOT_API_KEY")
+# RIOT_API_KEY = os.environ.get("RIOT_API_KEY")
+RIOT_API_KEY = "RGAPI-aea7e856-cbe8-4360-8284-089ac6523857"
 
 # Allowed frontend origins (comma-separated string)
 _RAW_ALLOWED_ORIGINS = (os.environ.get("ALLOWED_ORIGINS") or "").strip()

@@ -298,7 +298,9 @@ function App() {
 
       const response = await fetch(API_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json",
+          "x-api-key": "RGAPI-aea7e856-cbe8-4360-8284-089ac6523857"
+         },
         body: JSON.stringify({
           game_name: trimmedName,
           tag_line: trimmedTag,
