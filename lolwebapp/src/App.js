@@ -8,19 +8,21 @@ const REGION_OPTIONS = [
   { value: "EUROPE", label: "Europe", description: "EUW, EUNE, TR, RU" },
 ];
 
+const APP_SHARE_URL = "https://main.d4ccg2oosnodu.amplifyapp.com";
+
 const SAMPLE_RECAP = {
   winDistribution: [
-    { label: "Wins", value: 18 },
-    { label: "Losses", value: 6 },
+    { label: "Wins", value: 21 },
+    { label: "Losses", value: 7 },
     { label: "Remakes", value: 1 },
   ],
   kda: {
-    kills: 9.4,
-    deaths: 3.1,
-    assists: 11.7,
-    streak: 7,
-    csPerMin: 7.3,
-    goldPerMin: 420,
+    kills: 10.2,
+    deaths: 3.2,
+    assists: 12.9,
+    streak: 8,
+    csPerMin: 7.6,
+    goldPerMin: 438,
   },
   matchHistory: [
     {
@@ -28,10 +30,10 @@ const SAMPLE_RECAP = {
       champion: "Ashe",
       role: "Bot",
       result: "Win",
-      kda: "12 / 1 / 14",
-      csPerMin: 8.5,
-      damage: "31.8k dmg",
-      duration: "32:18",
+      kda: "13 / 1 / 16",
+      csPerMin: 8.2,
+      damage: "33.4k dmg",
+      duration: "31:08",
       highlightTag: "Quadra kill",
     },
     {
@@ -58,21 +60,21 @@ const SAMPLE_RECAP = {
     },
     {
       id: "NA1-5234205617",
-      champion: "Ashe",
+      champion: "Aphelios",
       role: "Bot",
       result: "Win",
-      kda: "8 / 1 / 13",
-      csPerMin: 7.5,
-      damage: "26.9k dmg",
-      duration: "27:33",
-      highlightTag: "MVP",
+      kda: "11 / 2 / 12",
+      csPerMin: 7.4,
+      damage: "30.1k dmg",
+      duration: "28:56",
+      highlightTag: "Baron flip",
     },
     {
       id: "NA1-5234100032",
       champion: "Jhin",
       role: "Bot",
       result: "Win",
-      kda: "11 / 3 / 9",
+      kda: "10 / 3 / 11",
       csPerMin: 6.8,
       damage: "25.1k dmg",
       duration: "31:11",
@@ -106,23 +108,45 @@ const SAMPLE_RECAP = {
   trendFocus: "Plays for late-game teamfights",
 };
 
+const createRecapData = ({ summoner, regionLabel }) => ({
+  summoner,
+  regionLabel,
+  winDistribution: SAMPLE_RECAP.winDistribution.map((segment) => ({
+    ...segment,
+  })),
+  kda: { ...SAMPLE_RECAP.kda },
+  matchHistory: SAMPLE_RECAP.matchHistory.map((match) => ({ ...match })),
+  playstyleTags: [...SAMPLE_RECAP.playstyleTags],
+  highlightMoments: SAMPLE_RECAP.highlightMoments.map((moment) => ({
+    ...moment,
+  })),
+  lastGamesCount: SAMPLE_RECAP.lastGamesCount,
+  trendFocus: SAMPLE_RECAP.trendFocus,
+});
+
 const buildShareSummary = (recap, winRate, kdaRatio) => {
+  const wins =
+    recap.winDistribution.find((segment) => segment.label === "Wins")?.value ?? 0;
+  const losses =
+    recap.winDistribution.find((segment) => segment.label === "Losses")?.value ?? 0;
   const topMatch = recap.matchHistory[0];
   const signaturePlay =
     recap.highlightMoments[0]?.title || "Leaving unforgettable plays on the Rift";
-  const playstyle = recap.playstyleTags.slice(0, 2).join(" • ") || "Clutch performer";
 
   const matchLine = topMatch
     ? `${topMatch.result} as ${topMatch.champion} (${topMatch.kda})`
     : "Stacking victories across the Rift";
 
   return [
-    `${recap.summoner} • ${recap.regionLabel}`,
-    `Win rate ${winRate}% across ${recap.lastGamesCount} games`,
-    `Avg KDA ${kdaRatio}:1 · ${matchLine}`,
-    `Playstyle: ${playstyle}`,
-    `Highlight: ${signaturePlay}`,
-    "#LeagueOfLegends #ClutchMoments #RiftRecap",
+    `🎮 ${recap.summoner}'s LOL Forge Recap`,
+    `📊 ${wins}W / ${losses}L (${winRate.toFixed(1)}% WR)`,
+    `⚔️ ${kdaRatio} KDA`,
+    `✨ Top moment: ${signaturePlay}`,
+    "",
+    `${matchLine}`,
+    "",
+    "🚀 Analyzed with AI insights!",
+    `Check yours: ${APP_SHARE_URL}`,
   ].join("\n");
 };
 
@@ -160,8 +184,8 @@ const copyTextToClipboard = async (text) => {
       await navigator.clipboard.writeText(text);
       return true;
     }
-  } catch (error) {
-    // Fallback below
+  } catch {
+    // fall back below
   }
 
   try {
@@ -176,26 +200,10 @@ const copyTextToClipboard = async (text) => {
     document.execCommand("copy");
     document.body.removeChild(textArea);
     return true;
-  } catch (fallbackError) {
+  } catch {
     return false;
   }
 };
-
-const createRecapData = ({ summoner, regionLabel }) => ({
-  summoner,
-  regionLabel,
-  winDistribution: SAMPLE_RECAP.winDistribution.map((segment) => ({
-    ...segment,
-  })),
-  kda: { ...SAMPLE_RECAP.kda },
-  matchHistory: SAMPLE_RECAP.matchHistory.map((match) => ({ ...match })),
-  playstyleTags: [...SAMPLE_RECAP.playstyleTags],
-  highlightMoments: SAMPLE_RECAP.highlightMoments.map((moment) => ({
-    ...moment,
-  })),
-  lastGamesCount: SAMPLE_RECAP.lastGamesCount,
-  trendFocus: SAMPLE_RECAP.trendFocus,
-});
 
 function App() {
   const [gameName, setGameName] = useState("");
@@ -240,6 +248,25 @@ function App() {
     [region]
   );
 
+  const totalGames = recapData.winDistribution.reduce(
+    (acc, segment) => acc + segment.value,
+    0
+  );
+  const winsSegment = recapData.winDistribution.find(
+    (segment) => segment.label === "Wins"
+  );
+  const winRate = totalGames
+    ? Math.round(((winsSegment?.value ?? 0) / totalGames) * 100)
+    : 0;
+  const kdaRatio = (
+    (recapData.kda.kills + recapData.kda.assists) /
+    Math.max(1, recapData.kda.deaths)
+  ).toFixed(2);
+  const shareSummary = useMemo(
+    () => buildShareSummary(recapData, winRate, Number(kdaRatio)),
+    [recapData, winRate, kdaRatio]
+  );
+
   const handleSubmit = (event) => {
     event.preventDefault();
 
@@ -255,47 +282,15 @@ function App() {
         regionLabel,
       })
     );
+    setRecapNarrative("");
     setView("recap");
     setAnimateApp(true);
-    setRecapNarrative("");
-
-    /*
-     * To restore the live API integration, re-enable the fetch logic below
-     * and wire the response into the recap view instead of the sample data.
-     *
-     * try {
-     *   const response = await fetch("https://your-api-here", { ... });
-     *   const payload = await response.json();
-     *   // setRecapData(transformPayload(payload));
-     * } catch (error) {
-     *   console.error(error);
-     * }
-     */
   };
 
   const handleBackToLookup = () => {
     setView("form");
     setAnimateApp(true);
   };
-
-  const totalGames = recapData.winDistribution.reduce(
-    (acc, segment) => acc + segment.value,
-    0
-  );
-  const winsSegment = recapData.winDistribution.find(
-    (segment) => segment.label === "Wins"
-  );
-  const winRate = totalGames
-    ? Math.round(((winsSegment?.value ?? 0) / totalGames) * 100)
-    : 0;
-  const kdaRatio = (
-    (recapData.kda.kills + recapData.kda.assists) /
-    Math.max(1, recapData.kda.deaths)
-  ).toFixed(1);
-  const shareSummary = useMemo(
-    () => buildShareSummary(recapData, winRate, kdaRatio),
-    [recapData, winRate, kdaRatio]
-  );
 
   const handleShare = async (platform) => {
     if (typeof window === "undefined") return;
@@ -318,14 +313,14 @@ function App() {
         setShareFeedback("Reddit share drafted in a new tab.");
         break;
       }
-      case "instagram": {
+      case "discord": {
         const copied = await copyTextToClipboard(shareSummary);
         if (copied) {
-          setShareFeedback("Caption copied. Paste it into your Instagram story or post.");
+          setShareFeedback("Recap copied. Paste it into your next Discord chat.");
         } else {
-          setShareFeedback("Unable to copy automatically—select and copy the caption manually.");
+          setShareFeedback("Copy failed. Please copy manually before posting to Discord.");
         }
-        window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
+        window.open("https://discord.com/channels/@me", "_blank", "noopener,noreferrer");
         break;
       }
       case "copy": {
@@ -345,7 +340,7 @@ function App() {
     setIsGeneratingRecap(true);
 
     setTimeout(() => {
-      setRecapNarrative(buildAiNarrative(recapData, winRate, kdaRatio));
+      setRecapNarrative(buildAiNarrative(recapData, winRate, Number(kdaRatio)));
       setIsGeneratingRecap(false);
     }, 1400);
   };
@@ -386,7 +381,7 @@ function App() {
                       type="text"
                       placeholder="Summoner (e.g. Faker)"
                       value={gameName}
-                      onChange={(e) => setGameName(e.target.value)}
+                      onChange={(event) => setGameName(event.target.value)}
                       required
                     />
                     <span className="riot-id__separator">#</span>
@@ -395,7 +390,7 @@ function App() {
                       type="text"
                       placeholder="Tag (e.g. KR1)"
                       value={tagLine}
-                      onChange={(e) => setTagLine(e.target.value)}
+                      onChange={(event) => setTagLine(event.target.value)}
                       required
                     />
                   </div>
@@ -409,7 +404,7 @@ function App() {
                     <select
                       id="region"
                       value={region}
-                      onChange={(e) => setRegion(e.target.value)}
+                      onChange={(event) => setRegion(event.target.value)}
                     >
                       {REGION_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -429,13 +424,44 @@ function App() {
             </main>
           ) : (
             <section className="recap">
+              <article className="ai-card ai-card--top">
+                <header className="ai-card__header">
+                  <h2>Spotify Wrapped-style recap</h2>
+                  <p>
+                    Generate an AI-written story beat that captures your vibe on
+                    the Rift. Perfect for captions, reels, or keeping the hype
+                    rolling into the next queue.
+                  </p>
+                </header>
+                <textarea
+                  className="ai-card__textarea"
+                  rows={8}
+                  value={recapNarrative}
+                  placeholder="Tap Generate Recap to create your personalized narrative."
+                  onChange={(event) => setRecapNarrative(event.target.value)}
+                />
+                <div className="ai-card__actions">
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={handleGenerateRecap}
+                    disabled={isGeneratingRecap}
+                  >
+                    {isGeneratingRecap ? "Summoning AI…" : "Generate Recap"}
+                  </button>
+                  <span className="ai-card__hint">
+                    Powered by AWS Bedrock-style storytelling using your latest
+                    performance.
+                  </span>
+                </div>
+              </article>
+
               <div className="recap__banner">
                 <div>
                   <p className="recap__eyebrow">Personalized recap</p>
                   <h1 className="recap__title">{recapData.summoner}</h1>
                   <p className="recap__meta">
-                    {recapData.regionLabel} · Last {recapData.lastGamesCount}{" "}
-                    games
+                    {recapData.regionLabel} · Last {recapData.lastGamesCount} games
                   </p>
                 </div>
                 <button
@@ -445,6 +471,54 @@ function App() {
                 >
                   Back to lookup
                 </button>
+              </div>
+
+              <div className="story">
+                <div className="story__frame">
+                  <div className="story__header">
+                    <span className="story__badge">LOL Forge</span>
+                    <span className="story__season">
+                      Last {recapData.lastGamesCount} games · {recapData.regionLabel}
+                    </span>
+                  </div>
+                  <div className="story__hero">
+                    <p className="story__tagline">Your Rift Wrapped</p>
+                    <h2 className="story__stat">{winRate}%</h2>
+                    <p className="story__label">Win rate</p>
+                  </div>
+                  <div className="story__grid">
+                    <div className="story__tile">
+                      <span className="story__tile-label">KDA</span>
+                      <span className="story__tile-value">{kdaRatio}:1</span>
+                    </div>
+                    <div className="story__tile">
+                      <span className="story__tile-label">Streak</span>
+                      <span className="story__tile-value">
+                        {recapData.kda.streak} W
+                      </span>
+                    </div>
+                    <div className="story__tile">
+                      <span className="story__tile-label">CS / min</span>
+                      <span className="story__tile-value">
+                        {recapData.kda.csPerMin.toFixed(1)}
+                      </span>
+                    </div>
+                    <div className="story__tile">
+                      <span className="story__tile-label">Gold / min</span>
+                      <span className="story__tile-value">
+                        {recapData.kda.goldPerMin}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="story__highlight">
+                    <span className="story__highlight-title">Highlight moment</span>
+                    <p>{recapData.highlightMoments[0]?.title}</p>
+                  </div>
+                  <div className="story__footer">
+                    <span>Swipe up</span>
+                    <strong>@lolforge</strong>
+                  </div>
+                </div>
               </div>
 
               <div className="stat-grid">
@@ -607,8 +681,9 @@ function App() {
                 <div>
                   <h2>Share your recap</h2>
                   <p>
-                    Spotlight your climb with a ready-to-post graphic for X or
-                    Instagram, complete with standout stats and moments.
+                    Spotlight your climb with ready-to-post captions for X,
+                    Discord, or Reddit, complete with standout stats and
+                    moments.
                   </p>
                 </div>
                 <div className="share-card__actions">
@@ -622,10 +697,10 @@ function App() {
                     </button>
                     <button
                       type="button"
-                      className="share-button share-button--instagram"
-                      onClick={() => handleShare("instagram")}
+                      className="share-button share-button--discord"
+                      onClick={() => handleShare("discord")}
                     >
-                      Instagram caption
+                      Share on Discord
                     </button>
                     <button
                       type="button"
@@ -651,38 +726,6 @@ function App() {
                   </div>
                 </div>
               </aside>
-
-              <article className="ai-card">
-                <header className="ai-card__header">
-                  <h2>Spotify Wrapped-style recap</h2>
-                  <p>
-                    Generate an AI-written story beat that captures your vibe on
-                    the Rift. Perfect for captions, reels, or keeping the hype
-                    rolling into the next queue.
-                  </p>
-                </header>
-                <textarea
-                  className="ai-card__textarea"
-                  rows={8}
-                  value={recapNarrative}
-                  placeholder="Tap Generate Recap to create your personalized narrative."
-                  onChange={(event) => setRecapNarrative(event.target.value)}
-                />
-                <div className="ai-card__actions">
-                  <button
-                    type="button"
-                    className="primary-button"
-                    onClick={handleGenerateRecap}
-                    disabled={isGeneratingRecap}
-                  >
-                    {isGeneratingRecap ? "Summoning AI…" : "Generate Recap"}
-                  </button>
-                  <span className="ai-card__hint">
-                    Powered by AWS Bedrock-style storytelling using your latest
-                    performance.
-                  </span>
-                </div>
-              </article>
             </section>
           )}
         </div>
