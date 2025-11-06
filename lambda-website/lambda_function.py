@@ -122,7 +122,7 @@ def lambda_handler(event, context):
         riot_id_url = (
             f"https://{routing}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/"
             f"{requests.utils.quote(game_name, safe='')}/"
-            f"{requests.utils.quote(tag_line, safe='')}"
+            f"{requests.utils.quote(tag_line, safe='')}/"
         )
         headers = {"X-Riot-Token": RIOT_API_KEY}
 
@@ -145,7 +145,7 @@ def lambda_handler(event, context):
         # Step 2: Get match history (latest 5)
         match_url = (
             f"https://{routing}.api.riotgames.com/lol/match/v5/matches/by-puuid/"
-            f"{puuid}/ids?count=5"
+            f"{puuid}/ids?count=5/"
         )
         match_res = requests.get(match_url, headers=headers, timeout=10)
         if match_res.status_code != 200:
