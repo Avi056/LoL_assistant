@@ -96,6 +96,9 @@ function App() {
         "https://fiauf5t7o7.execute-api.us-east-1.amazonaws.com/prod/matches",
         {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify({
             game_name: gameName.trim(),
             tag_line: tagLine.trim(),
