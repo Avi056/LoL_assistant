@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
+import introImage from "./assets/1568742297124374.jpeg";
 
 const REGION_OPTIONS = [
   { value: "ASIA", label: "Asia", description: "KR, JP, OCE, PH, SG" },
@@ -17,6 +18,23 @@ function App() {
   const [error, setError] = useState(null);
   const [copyFeedback, setCopyFeedback] = useState("");
   const copyTimeoutRef = useRef(null);
+  const [showIntro, setShowIntro] = useState(true);
+  const [animateApp, setAnimateApp] = useState(false);
+
+  useEffect(() => {
+    const introTimer = setTimeout(() => {
+      setShowIntro(false);
+      setAnimateApp(true);
+    }, 5000);
+
+    return () => clearTimeout(introTimer);
+  }, []);
+
+  useEffect(() => {
+    if (!animateApp) return undefined;
+    const animationTimer = setTimeout(() => setAnimateApp(false), 700);
+    return () => clearTimeout(animationTimer);
+  }, [animateApp]);
 
   useEffect(() => {
     return () => {
@@ -115,122 +133,138 @@ function App() {
   };
 
   return (
-    <div className="app">
-      <main className="card">
-        <div className="card__header">
-          <h1 className="title">League of Legends Match Explorer</h1>
-          <p className="subtitle">
-            Enter a Riot ID to pull the five most recent matches straight from
-            the Riot Games API. Perfect for scouting opponents or reviewing your
-            own performance.
-          </p>
+    <div className="app-shell">
+      {showIntro && (
+        <div className="intro-screen">
+          <img
+            className="intro-screen__image"
+            src={introImage}
+            alt="Loading splash art"
+          />
         </div>
+      )}
 
-        <form className="form" onSubmit={fetchMatches}>
-          <div className="field-group">
-            <label className="field-label" htmlFor="riot-name">
-              Riot ID
-            </label>
-            <div className="riot-id">
-              <input
-                id="riot-name"
-                type="text"
-                placeholder="Summoner (e.g. Faker)"
-                value={gameName}
-                onChange={(e) => setGameName(e.target.value)}
-                required
-              />
-              <span className="riot-id__separator">#</span>
-              <input
-                id="riot-tag"
-                type="text"
-                placeholder="Tag (e.g. KR1)"
-                value={tagLine}
-                onChange={(e) => setTagLine(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="field-group">
-            <label className="field-label" htmlFor="region">
-              Region
-            </label>
-            <div className="select-wrapper">
-              <select
-                id="region"
-                value={region}
-                onChange={(e) => setRegion(e.target.value)}
-              >
-                {REGION_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label} · {option.description}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="form-actions">
-            <button type="submit" disabled={loading}>
-              {loading ? "Fetching matches…" : "Fetch matches"}
-            </button>
-            <p className="region-hint">
-              Querying: <strong>{regionDetails?.label}</strong> servers
-            </p>
-          </div>
-        </form>
-
-        {error && <div className="alert alert--error">{error}</div>}
-        {!error && copyFeedback && (
-          <div className="alert alert--success">{copyFeedback}</div>
-        )}
-
-        <section className="matches">
-          <div className="matches__header">
-            <h2>Recent matches</h2>
-            {summonerLabel && (
-              <p className="matches__meta">
-                Showing latest games for <strong>{summonerLabel}</strong>
+      {!showIntro && (
+        <div className={`app ${animateApp ? "app--enter" : ""}`}>
+          <main className="card">
+            <div className="card__header">
+              <h1 className="title">League of Legends Match Explorer</h1>
+              <p className="subtitle">
+                Enter a Riot ID to pull the five most recent matches straight
+                from the Riot Games API. Perfect for scouting opponents or
+                reviewing your own performance.
               </p>
-            )}
-          </div>
-
-          {loading && (
-            <div className="loading">
-              <span className="loading__spinner" aria-hidden />
-              <span>Contacting the Rift…</span>
             </div>
-          )}
 
-          {!loading && matches.length > 0 && (
-            <ul className="matches__grid">
-              {matches.map((matchId, index) => (
-                <li key={matchId} className="match-card">
-                  <div className="match-card__content">
-                    <span className="match-card__index">#{index + 1}</span>
-                    <p className="match-card__id">{matchId}</p>
-                  </div>
-                  <button
-                    type="button"
-                    className="match-card__action"
-                    onClick={() => handleCopy(matchId)}
+            <form className="form" onSubmit={fetchMatches}>
+              <div className="field-group">
+                <label className="field-label" htmlFor="riot-name">
+                  Riot ID
+                </label>
+                <div className="riot-id">
+                  <input
+                    id="riot-name"
+                    type="text"
+                    placeholder="Summoner (e.g. Faker)"
+                    value={gameName}
+                    onChange={(e) => setGameName(e.target.value)}
+                    required
+                  />
+                  <span className="riot-id__separator">#</span>
+                  <input
+                    id="riot-tag"
+                    type="text"
+                    placeholder="Tag (e.g. KR1)"
+                    value={tagLine}
+                    onChange={(e) => setTagLine(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="field-group">
+                <label className="field-label" htmlFor="region">
+                  Region
+                </label>
+                <div className="select-wrapper">
+                  <select
+                    id="region"
+                    value={region}
+                    onChange={(e) => setRegion(e.target.value)}
                   >
-                    Copy ID
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+                    {REGION_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label} · {option.description}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
 
-          {!loading && matches.length === 0 && !error && (
-            <p className="empty-state">
-              No matches yet. Enter a Riot ID above and press{" "}
-              <strong>Fetch matches</strong> to get started.
-            </p>
-          )}
-        </section>
-      </main>
+              <div className="form-actions">
+                <button type="submit" disabled={loading}>
+                  {loading ? "Fetching matches…" : "Fetch matches"}
+                </button>
+                <p className="region-hint">
+                  Querying: <strong>{regionDetails?.label}</strong> servers
+                </p>
+              </div>
+            </form>
+
+            {error && <div className="alert alert--error">{error}</div>}
+            {!error && copyFeedback && (
+              <div className="alert alert--success">{copyFeedback}</div>
+            )}
+
+            <section className="matches">
+              <div className="matches__header">
+                <h2>Recent matches</h2>
+                {summonerLabel && (
+                  <p className="matches__meta">
+                    Showing latest games for <strong>{summonerLabel}</strong>
+                  </p>
+                )}
+              </div>
+
+              {loading && (
+                <div className="loading">
+                  <span className="loading__spinner" aria-hidden />
+                  <span>Contacting the Rift…</span>
+                </div>
+              )}
+
+              {!loading && matches.length > 0 && (
+                <ul className="matches__grid">
+                  {matches.map((matchId, index) => (
+                    <li key={matchId} className="match-card">
+                      <div className="match-card__content">
+                        <span className="match-card__index">
+                          #{index + 1}
+                        </span>
+                        <p className="match-card__id">{matchId}</p>
+                      </div>
+                      <button
+                        type="button"
+                        className="match-card__action"
+                        onClick={() => handleCopy(matchId)}
+                      >
+                        Copy ID
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {!loading && matches.length === 0 && !error && (
+                <p className="empty-state">
+                  No matches yet. Enter a Riot ID above and press{" "}
+                  <strong>Fetch matches</strong> to get started.
+                </p>
+              )}
+            </section>
+          </main>
+        </div>
+      )}
     </div>
   );
 }
