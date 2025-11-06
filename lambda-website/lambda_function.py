@@ -4,9 +4,7 @@ import os
 import requests
 
 # --- Environment variables ---
-# Set these in the Lambda Console → Configuration → Environment variables
 RIOT_API_KEY = os.environ.get("RIOT_API_KEY")
-CUSTOM_API_KEY = os.environ.get("CUSTOM_API_KEY")  # optional shared key for your frontend
 
 # Allowed frontend origins (comma-separated string)
 _RAW_ALLOWED_ORIGINS = (os.environ.get("ALLOWED_ORIGINS") or "").strip()
@@ -32,10 +30,7 @@ def _build_cors_headers(event: dict) -> dict:
     return {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": allowed_origin,
-        "Access-Control-Allow-Headers": (
-            "Content-Type,Authorization,X-Amz-Date,X-Amz-Security-Token,"
-            "x-api-key,X-Api-Key"
-        ),
+        "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Amz-Date,X-Amz-Security-Token",
         "Access-Control-Allow-Methods": "OPTIONS,POST",
         "Access-Control-Allow-Credentials": "false",
         "Vary": "Origin",
@@ -50,22 +45,6 @@ def _build_response(event: dict, status_code: int, body: dict | str) -> dict:
     }
 
 
-# ---------- Auth helper ----------
-def _require_api_key(event: dict) -> tuple[bool, dict | None]:
-    if not CUSTOM_API_KEY:
-        return True, None
-
-    headers = event.get("headers") or {}
-    provided = headers.get("x-api-key") or headers.get("X-Api-Key")
-    if provided != CUSTOM_API_KEY:
-        return False, {
-            "statusCode": 401,
-            "headers": _build_cors_headers(event),
-            "body": json.dumps({"error": "Unauthorized"}),
-        }
-    return True, None
-
-
 # ---------- Lambda entry ----------
 def lambda_handler(event, context):
     method = (
@@ -74,15 +53,8 @@ def lambda_handler(event, context):
     ).upper()
 
     if method == "OPTIONS":
-        return {
-            "statusCode": 204,
-            "headers": _build_cors_headers(event),
-            "body": "",
-        }
-
-    ok, err = _require_api_key(event)
-    if not ok:
-        return err
+        # Handle CORS preflight
+        return {"statusCode": 204, "headers": _build_cors_headers(event), "body": ""}
 
     try:
         raw_body = event.get("body", "{}")
