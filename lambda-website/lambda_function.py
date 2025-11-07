@@ -1,16 +1,10 @@
 import base64
 import json
-import os
 import requests
 
-# --- Environment variables ---
-# RIOT_API_KEY = os.environ.get("RIOT_API_KEY")
-RIOT_API_KEY = "RGAPI-aea7e856-cbe8-4360-8284-089ac6523857"
-
-# Allowed frontend origins (comma-separated string)
-_RAW_ALLOWED_ORIGINS = (os.environ.get("ALLOWED_ORIGINS") or "").strip()
-ALLOWED_ORIGINS = [o.strip() for o in _RAW_ALLOWED_ORIGINS.split(",") if o.strip()]
-
+# --- Hard-coded configuration ---
+RIOT_API_KEY = "RGAPI-aea7e856-cbe8-4360-8284-089ac6523857"   # your actual Riot key here
+ALLOWED_ORIGINS = ["https://main.dmmttg0yma1yv.amplifyapp.com"]
 
 # ---------- CORS helpers ----------
 def _resolve_cors_origin(origin: str | None) -> str:
@@ -31,7 +25,10 @@ def _build_cors_headers(event: dict) -> dict:
     return {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": allowed_origin,
-        "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Amz-Date,X-Amz-Security-Token",
+        "Access-Control-Allow-Headers": (
+            "content-type,Content-Type,authorization,Authorization,"
+            "X-Amz-Date,X-Amz-Security-Token,x-api-key,X-Api-Key"
+        ),
         "Access-Control-Allow-Methods": "OPTIONS,POST",
         "Access-Control-Allow-Credentials": "false",
         "Vary": "Origin",
@@ -43,20 +40,31 @@ def _build_response(event: dict, status_code: int, body: dict | str) -> dict:
         "statusCode": status_code,
         "headers": _build_cors_headers(event),
         "body": json.dumps(body) if not isinstance(body, str) else body,
+        "isBase64Encoded": False,
     }
 
 
 # ---------- Lambda entry ----------
 def lambda_handler(event, context):
+    # Detect method (works for HTTP API v2 or REST v1)
     method = (
-        event.get("httpMethod")
-        or event.get("requestContext", {}).get("http", {}).get("method", "")
+        (event.get("requestContext") or {}).get("http", {}).get("method")
+        or event.get("httpMethod")
+        or (event.get("requestContext") or {}).get("httpMethod")
+        or ""
     ).upper()
+    route_key = (event.get("routeKey") or "").upper()
 
-    if method == "OPTIONS":
-        # Handle CORS preflight
-        return {"statusCode": 204, "headers": _build_cors_headers(event), "body": ""}
+    # ---- Preflight ----
+    if method == "OPTIONS" or route_key.startswith("OPTIONS "):
+        return {
+            "statusCode": 204,
+            "headers": _build_cors_headers(event),
+            "body": "",
+            "isBase64Encoded": False,
+        }
 
+    # ---- Main request ----
     try:
         raw_body = event.get("body", "{}")
         if event.get("isBase64Encoded"):
@@ -67,20 +75,18 @@ def lambda_handler(event, context):
         game_name = (body.get("game_name") or "").strip() or "Faker"
         tag_line = (body.get("tag_line") or "").strip() or "KR1"
         region = (body.get("region") or "ASIA").strip().upper()
+        routing = region.lower()
 
         if not RIOT_API_KEY:
             return _build_response(event, 500, {"error": "RIOT_API_KEY not configured"})
 
-        routing = region.lower()
-
-        # Step 1: Get PUUID
+        # Step 1 – Get PUUID
         riot_id_url = (
             f"https://{routing}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/"
             f"{requests.utils.quote(game_name, safe='')}/"
             f"{requests.utils.quote(tag_line, safe='')}"
         )
         headers = {"X-Riot-Token": RIOT_API_KEY}
-
         account_res = requests.get(riot_id_url, headers=headers, timeout=10)
         if account_res.status_code != 200:
             return _build_response(
@@ -91,11 +97,9 @@ def lambda_handler(event, context):
 
         puuid = account_res.json().get("puuid")
         if not puuid:
-            return _build_response(
-                event, 502, {"error": "Missing PUUID in Riot response"}
-            )
+            return _build_response(event, 502, {"error": "Missing PUUID in Riot response"})
 
-        # Step 2: Get match history (latest 5)
+        # Step 2 – Get match IDs
         match_url = (
             f"https://{routing}.api.riotgames.com/lol/match/v5/matches/by-puuid/"
             f"{puuid}/ids?count=5"
@@ -110,22 +114,16 @@ def lambda_handler(event, context):
 
         matches = match_res.json() or []
 
-        # Step 3: Return success
+        # Step 3 – Return success
         return _build_response(
             event,
             200,
-            {
-                "summoner": f"{game_name}#{tag_line}",
-                "region": region,
-                "matches": matches,
-            },
+            {"summoner": f"{game_name}#{tag_line}", "region": region, "matches": matches},
         )
 
-    except requests.RequestException as request_error:
+    except requests.RequestException as re:
         return _build_response(
-            event,
-            502,
-            {"error": "Failed to contact Riot API", "details": str(request_error)},
+            event, 502, {"error": "Failed to contact Riot API", "details": str(re)}
         )
     except Exception as e:
         return _build_response(event, 500, {"error": str(e)})
