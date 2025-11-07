@@ -1,0 +1,6 @@
+/riot/account/v1/accounts/by-riot-id/{gameName}/{tagLine}
+/lol/match/v5/matches/by-puuid/{puuid}/ids
+/lol/match/v5/matches/{matchId}
+/lol/summoner/v4/summoners/by-puuid/{puuid}
+/lol/league/v4/entries/by-summoner/{encryptedSummonerId}
+/lol/status/v4/platform-data

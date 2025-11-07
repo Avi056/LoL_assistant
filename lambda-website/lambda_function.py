@@ -1,13 +1,31 @@
 import base64
 import json
+import os
+from collections import Counter
+from typing import Any, Dict, List, Optional, Tuple
+
 import requests
 
-# --- Hard-coded configuration ---
-RIOT_API_KEY = "RGAPI-aea7e856-cbe8-4360-8284-089ac6523857"   # your actual Riot key here
-ALLOWED_ORIGINS = ["https://main.dmmttg0yma1yv.amplifyapp.com"]
+# --- Environment variables ---
+RIOT_API_KEY = os.environ.get("RIOT_API_KEY")
+CUSTOM_API_KEY = os.environ.get("CUSTOM_API_KEY")
+
+MATCH_ID_LIMIT = int(os.environ.get("MATCH_ID_LIMIT", "5"))
+MATCH_DETAIL_LIMIT = int(os.environ.get("MATCH_DETAIL_LIMIT", "10"))
+MATCH_HISTORY_LIMIT = int(os.environ.get("MATCH_HISTORY_LIMIT", "5"))
+
+DEFAULT_PLATFORM_BY_REGION = {
+    "AMERICAS": "na1",
+    "EUROPE": "euw1",
+    "ASIA": "kr",
+}
+
+_RAW_ALLOWED_ORIGINS = (os.environ.get("ALLOWED_ORIGINS") or "").strip()
+ALLOWED_ORIGINS = [o.strip() for o in _RAW_ALLOWED_ORIGINS.split(",") if o.strip()]
+
 
 # ---------- CORS helpers ----------
-def _resolve_cors_origin(origin: str | None) -> str:
+def _resolve_cors_origin(origin: Optional[str]) -> str:
     if not ALLOWED_ORIGINS:
         return origin or "*"
     if origin and origin in ALLOWED_ORIGINS:
@@ -17,7 +35,7 @@ def _resolve_cors_origin(origin: str | None) -> str:
     return ALLOWED_ORIGINS[0]
 
 
-def _build_cors_headers(event: dict) -> dict:
+def _build_cors_headers(event: Dict[str, Any]) -> Dict[str, str]:
     headers = event.get("headers") or {}
     origin = headers.get("origin") or headers.get("Origin")
     allowed_origin = _resolve_cors_origin(origin)
@@ -26,8 +44,8 @@ def _build_cors_headers(event: dict) -> dict:
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": allowed_origin,
         "Access-Control-Allow-Headers": (
-            "content-type,Content-Type,authorization,Authorization,"
-            "X-Amz-Date,X-Amz-Security-Token,x-api-key,X-Api-Key"
+            "Content-Type,Authorization,X-Amz-Date,X-Amz-Security-Token,"
+            "x-api-key,X-Api-Key"
         ),
         "Access-Control-Allow-Methods": "OPTIONS,POST",
         "Access-Control-Allow-Credentials": "false",
@@ -35,36 +53,287 @@ def _build_cors_headers(event: dict) -> dict:
     }
 
 
-def _build_response(event: dict, status_code: int, body: dict | str) -> dict:
+def _build_response(event: Dict[str, Any], status_code: int, body: Any) -> Dict[str, Any]:
     return {
         "statusCode": status_code,
         "headers": _build_cors_headers(event),
         "body": json.dumps(body) if not isinstance(body, str) else body,
-        "isBase64Encoded": False,
+    }
+
+
+# ---------- Helpers ----------
+def _format_duration(seconds: float) -> str:
+    total_seconds = max(0, int(round(seconds)))
+    minutes, secs = divmod(total_seconds, 60)
+    return f"{minutes}:{secs:02d}"
+
+
+def _safe_div(numerator: float, denominator: float) -> float:
+    return numerator / denominator if denominator else 0.0
+
+
+def _require_api_key(event: Dict[str, Any]) -> Tuple[bool, Optional[Dict[str, Any]]]:
+    if not CUSTOM_API_KEY:
+        return True, None
+
+    headers = event.get("headers") or {}
+    provided = headers.get("x-api-key") or headers.get("X-Api-Key")
+    if provided != CUSTOM_API_KEY:
+        return False, {
+            "statusCode": 401,
+            "headers": _build_cors_headers(event),
+            "body": json.dumps({"error": "Unauthorized"}),
+        }
+    return True, None
+
+
+def _riot_headers() -> Dict[str, str]:
+    if not RIOT_API_KEY:
+        raise RuntimeError("RIOT_API_KEY not configured")
+    return {"X-Riot-Token": RIOT_API_KEY}
+
+
+def _riot_get_json(
+    url: str,
+    *,
+    params: Optional[Dict[str, Any]] = None,
+    timeout: int = 15,
+) -> Dict[str, Any]:
+    response = requests.get(url, headers=_riot_headers(), params=params, timeout=timeout)
+    if response.status_code != 200:
+        raise RuntimeError(
+            f"Riot API error {response.status_code} for {url} :: {response.text[:200]}"
+        )
+    try:
+        return response.json()
+    except ValueError as exc:  # pragma: no cover - defensive
+        raise RuntimeError(f"Invalid JSON from Riot API for {url}") from exc
+
+
+def _extract_match_entry(match_json: Dict[str, Any], puuid: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    info = match_json.get("info") or {}
+    participants: List[Dict[str, Any]] = info.get("participants") or []
+    player = next((p for p in participants if p.get("puuid") == puuid), None)
+    if not player:
+        return None, info.get("platformId")
+
+    duration = info.get("gameDuration") or info.get("gameLength") or 0
+    if duration > 40000:  # some legacy matches report ms
+        duration = duration / 1000
+    duration_minutes = _safe_div(duration, 60)
+
+    total_cs = (player.get("totalMinionsKilled") or 0) + (player.get("neutralMinionsKilled") or 0)
+    cs_per_min = _safe_div(total_cs, duration_minutes)
+    gold_per_min = _safe_div(player.get("goldEarned", 0), duration_minutes)
+
+    team_id = player.get("teamId")
+    team_kills = sum(
+        ally.get("kills", 0)
+        for ally in participants
+        if ally.get("teamId") == team_id
+    ) or 1
+    kp = _safe_div(player.get("kills", 0) + player.get("assists", 0), team_kills)
+
+    is_remake = duration < 300
+    damage_champs = player.get("totalDamageDealtToChampions", 0)
+    hero_score = damage_champs / 1000 + player.get("kills", 0) * 2 + kp * 50
+
+    highlight_tag = None
+    if (player.get("pentaKills") or 0) > 0:
+        highlight_tag = "Penta Threat"
+    elif (player.get("largestMultiKill") or 0) >= 4:
+        highlight_tag = "Quadra Kill"
+    elif kp >= 0.7:
+        highlight_tag = "Teamfight Anchor"
+    elif player.get("damageDealtToObjectives", 0) > 15000:
+        highlight_tag = "Objective Hunter"
+    elif player.get("visionScore", 0) >= 40:
+        highlight_tag = "Vision Controller"
+    else:
+        highlight_tag = "Carry Performance"
+
+    entry = {
+        "id": info.get("gameId") or match_json.get("metadata", {}).get("matchId"),
+        "matchId": match_json.get("metadata", {}).get("matchId"),
+        "champion": player.get("championName") or "Unknown",
+        "role": player.get("teamPosition") or player.get("individualPosition") or "FLEX",
+        "win": bool(player.get("win")),
+        "kda_tuple": (
+            player.get("kills", 0),
+            player.get("deaths", 0),
+            player.get("assists", 0),
+        ),
+        "kda": f"{player.get('kills', 0)} / {player.get('deaths', 0)} / {player.get('assists', 0)}",
+        "cs_per_min": cs_per_min,
+        "gold_per_min": gold_per_min,
+        "objective_damage": player.get("damageDealtToObjectives", 0),
+        "vision_score": player.get("visionScore", 0),
+        "damage_champs": damage_champs,
+        "duration_seconds": duration,
+        "duration_label": _format_duration(duration),
+        "highlight_tag": highlight_tag,
+        "kill_participation": round(kp * 100, 1),
+        "queue_id": info.get("queueId"),
+        "is_remake": is_remake,
+        "hero_score": hero_score,
+    }
+    return entry, info.get("platformId")
+
+
+def _build_recap_payload(
+    summoner_label: str,
+    region_label: str,
+    matches: List[Dict[str, Any]],
+    league_entries: List[Dict[str, Any]],
+    platform_name: Optional[str],
+) -> Dict[str, Any]:
+    if not matches:
+        return {
+            "summoner": summoner_label,
+            "regionLabel": region_label,
+            "winDistribution": [
+                {"label": "Wins", "value": 0},
+                {"label": "Losses", "value": 0},
+                {"label": "Remakes", "value": 0},
+            ],
+            "kda": {
+                "kills": 0,
+                "deaths": 0,
+                "assists": 0,
+                "streak": 0,
+                "csPerMin": 0,
+                "goldPerMin": 0,
+            },
+            "matchHistory": [],
+            "playstyleTags": ["Data unavailable"],
+            "highlightMoments": [],
+            "lastGamesCount": 0,
+            "trendFocus": f"Waiting on fresh data from {platform_name or region_label}.",
+        }
+
+    wins = sum(1 for entry in matches if entry["win"] and not entry["is_remake"])
+    losses = sum(1 for entry in matches if not entry["win"] and not entry["is_remake"])
+    remakes = sum(1 for entry in matches if entry["is_remake"])
+
+    avg_kills = _safe_div(sum(e["kda_tuple"][0] for e in matches), len(matches))
+    avg_deaths = _safe_div(sum(e["kda_tuple"][1] for e in matches), len(matches))
+    avg_assists = _safe_div(sum(e["kda_tuple"][2] for e in matches), len(matches))
+    avg_cs_min = _safe_div(sum(e["cs_per_min"] for e in matches), len(matches))
+    avg_gold_min = _safe_div(sum(e["gold_per_min"] for e in matches), len(matches))
+
+    avg_objective_damage = _safe_div(sum(e["objective_damage"] for e in matches), len(matches))
+    avg_vision = _safe_div(sum(e["vision_score"] for e in matches), len(matches))
+    avg_kp = _safe_div(sum(e["kill_participation"] for e in matches), len(matches))
+
+    streak = longest = 0
+    for entry in matches:
+        if entry["win"]:
+            streak += 1
+            longest = max(longest, streak)
+        else:
+            streak = 0
+
+    role_counter = Counter(entry["role"] for entry in matches if entry.get("role"))
+    top_role = role_counter.most_common(1)[0][0] if role_counter else "Flex"
+
+    playstyle_tags: List[str] = []
+    if avg_kills >= 9:
+        playstyle_tags.append("Aggressive Marksman")
+    if avg_objective_damage >= 12000:
+        playstyle_tags.append("Objective Hunter")
+    if avg_vision >= 35:
+        playstyle_tags.append("Vision Controller")
+    if avg_kp >= 65 or avg_assists >= 10:
+        playstyle_tags.append("Teamfight Anchor")
+    if not playstyle_tags:
+        playstyle_tags.append("Reliable Carry")
+
+    match_history = [
+        {
+            "id": entry["matchId"] or entry["id"],
+            "champion": entry["champion"],
+            "role": entry["role"],
+            "result": "Win" if entry["win"] else "Loss",
+            "kda": entry["kda"],
+            "csPerMin": round(entry["cs_per_min"], 2),
+            "damage": f"{round(entry['damage_champs'] / 1000, 1)}k dmg",
+            "duration": entry["duration_label"],
+            "highlightTag": entry["highlight_tag"],
+        }
+        for entry in matches[:MATCH_HISTORY_LIMIT]
+    ]
+
+    highlight_moments = []
+    for entry in sorted(matches, key=lambda e: e["hero_score"], reverse=True)[:3]:
+        highlight_moments.append(
+            {
+                "title": entry["highlight_tag"],
+                "description": (
+                    f"{entry['champion']} went {entry['kda']} with "
+                    f"{round(entry['damage_champs'] / 1000, 1)}k damage and "
+                    f"{entry['kill_participation']}% KP in {entry['duration_label']}."
+                ),
+            }
+        )
+
+    rank_summary = None
+    for entry in league_entries:
+        if entry.get("queueType") == "RANKED_SOLO_5x5":
+            rank_summary = (
+                f"{entry.get('tier', '').title()} {entry.get('rank', '')} "
+                f"{entry.get('leaguePoints', 0)} LP "
+                f"({entry.get('wins', 0)}W/{entry.get('losses', 0)}L)"
+            ).strip()
+            break
+
+    trend_focus_bits = [f"{top_role.title()} specialist"]
+    if rank_summary:
+        trend_focus_bits.append(rank_summary)
+    if platform_name:
+        trend_focus_bits.append(platform_name)
+
+    return {
+        "summoner": summoner_label,
+        "regionLabel": region_label,
+        "winDistribution": [
+            {"label": "Wins", "value": wins},
+            {"label": "Losses", "value": losses},
+            {"label": "Remakes", "value": remakes},
+        ],
+        "kda": {
+            "kills": round(avg_kills, 1),
+            "deaths": round(avg_deaths, 1),
+            "assists": round(avg_assists, 1),
+            "streak": longest,
+            "csPerMin": round(avg_cs_min, 2),
+            "goldPerMin": round(avg_gold_min, 2),
+        },
+        "matchHistory": match_history,
+        "playstyleTags": playstyle_tags,
+        "highlightMoments": highlight_moments,
+        "lastGamesCount": len(matches),
+        "trendFocus": " · ".join(trend_focus_bits),
     }
 
 
 # ---------- Lambda entry ----------
 def lambda_handler(event, context):
-    # Detect method (works for HTTP API v2 or REST v1)
     method = (
-        (event.get("requestContext") or {}).get("http", {}).get("method")
-        or event.get("httpMethod")
-        or (event.get("requestContext") or {}).get("httpMethod")
-        or ""
+        event.get("httpMethod")
+        or event.get("requestContext", {}).get("http", {}).get("method", "")
     ).upper()
-    route_key = (event.get("routeKey") or "").upper()
 
-    # ---- Preflight ----
-    if method == "OPTIONS" or route_key.startswith("OPTIONS "):
+    if method == "OPTIONS":
         return {
             "statusCode": 204,
             "headers": _build_cors_headers(event),
             "body": "",
-            "isBase64Encoded": False,
         }
 
-    # ---- Main request ----
+    ok, err = _require_api_key(event)
+    if not ok:
+        return err
+
     try:
         raw_body = event.get("body", "{}")
         if event.get("isBase64Encoded"):
@@ -75,55 +344,110 @@ def lambda_handler(event, context):
         game_name = (body.get("game_name") or "").strip() or "Faker"
         tag_line = (body.get("tag_line") or "").strip() or "KR1"
         region = (body.get("region") or "ASIA").strip().upper()
-        routing = region.lower()
+        region_label = region
 
         if not RIOT_API_KEY:
             return _build_response(event, 500, {"error": "RIOT_API_KEY not configured"})
 
-        # Step 1 – Get PUUID
+        routing = region.lower()
+
+        # Step 1: Get PUUID
         riot_id_url = (
             f"https://{routing}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/"
             f"{requests.utils.quote(game_name, safe='')}/"
             f"{requests.utils.quote(tag_line, safe='')}"
         )
-        headers = {"X-Riot-Token": RIOT_API_KEY}
-        account_res = requests.get(riot_id_url, headers=headers, timeout=10)
-        if account_res.status_code != 200:
-            return _build_response(
-                event,
-                account_res.status_code,
-                {"error": "Failed to fetch Riot account", "details": account_res.text},
-            )
-
-        puuid = account_res.json().get("puuid")
+        account_data = _riot_get_json(riot_id_url)
+        puuid = account_data.get("puuid")
         if not puuid:
             return _build_response(event, 502, {"error": "Missing PUUID in Riot response"})
 
-        # Step 2 – Get match IDs
+        # Step 2: Get match IDs
         match_url = (
             f"https://{routing}.api.riotgames.com/lol/match/v5/matches/by-puuid/"
-            f"{puuid}/ids?count=5"
+            f"{puuid}/ids"
         )
-        match_res = requests.get(match_url, headers=headers, timeout=10)
-        if match_res.status_code != 200:
+        count_param = max(MATCH_DETAIL_LIMIT, MATCH_ID_LIMIT)
+        match_ids = _riot_get_json(match_url, params={"count": count_param}) or []
+        trimmed_match_ids = match_ids[:MATCH_ID_LIMIT]
+
+        # Step 3: Fetch match details for recap
+        detailed_entries: List[Dict[str, Any]] = []
+        platform_host: Optional[str] = None
+        for match_id in match_ids[:MATCH_DETAIL_LIMIT]:
+            detail_url = (
+                f"https://{routing}.api.riotgames.com/lol/match/v5/matches/{match_id}"
+            )
+            try:
+                detail_json = _riot_get_json(detail_url)
+            except RuntimeError:
+                continue
+            entry, platform_id = _extract_match_entry(detail_json, puuid)
+            if not entry:
+                continue
+            detailed_entries.append(entry)
+            if not platform_host and platform_id:
+                platform_host = platform_id.lower()
+
+        if not detailed_entries:
             return _build_response(
                 event,
-                match_res.status_code,
-                {"error": "Failed to fetch matches", "details": match_res.text},
+                404,
+                {"error": "No recent match details available for this Riot ID."},
             )
 
-        matches = match_res.json() or []
+        platform_host = platform_host or DEFAULT_PLATFORM_BY_REGION.get(region, "na1")
 
-        # Step 3 – Return success
+        # Step 4: Enriched data (Summoner + League + Status)
+        league_entries: List[Dict[str, Any]] = []
+        platform_name = None
+        try:
+            summoner_url = (
+                f"https://{platform_host}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{puuid}"
+            )
+            summoner_data = _riot_get_json(summoner_url)
+            encrypted_id = summoner_data.get("id")
+            if encrypted_id:
+                league_url = (
+                    f"https://{platform_host}.api.riotgames.com/lol/league/v4/entries/by-summoner/{encrypted_id}"
+                )
+                league_entries = _riot_get_json(league_url) or []
+        except RuntimeError:
+            league_entries = []
+
+        try:
+            status_url = f"https://{platform_host}.api.riotgames.com/lol/status/v4/platform-data"
+            status_data = _riot_get_json(status_url)
+            platform_name = status_data.get("name")
+        except RuntimeError:
+            platform_name = platform_host.upper()
+
+        recap_payload = _build_recap_payload(
+            f"{game_name}#{tag_line}",
+            region_label,
+            detailed_entries,
+            league_entries,
+            platform_name,
+        )
+
         return _build_response(
             event,
             200,
-            {"summoner": f"{game_name}#{tag_line}", "region": region, "matches": matches},
+            {
+                "summoner": recap_payload["summoner"],
+                "region": region,
+                "matches": trimmed_match_ids,
+                "recap": recap_payload,
+            },
         )
 
-    except requests.RequestException as re:
+    except requests.RequestException as request_error:
         return _build_response(
-            event, 502, {"error": "Failed to contact Riot API", "details": str(re)}
+            event,
+            502,
+            {"error": "Failed to contact Riot API", "details": str(request_error)},
         )
-    except Exception as e:
-        return _build_response(event, 500, {"error": str(e)})
+    except RuntimeError as runtime_error:
+        return _build_response(event, 502, {"error": str(runtime_error)})
+    except Exception as exc:  # pragma: no cover - defensive
+        return _build_response(event, 500, {"error": str(exc)})
