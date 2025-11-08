@@ -31,6 +31,11 @@ const APP_SHARE_URL = "https://main.dmmttg0yma1yv.amplifyapp.com/";
 const DATA_DRAGON_VERSION = "14.24.1";
 const API_URL =
   "https://fiauf5t7o7.execute-api.us-east-1.amazonaws.com/InitialStage/matches";
+const IDENTITY_SHARE_PLATFORMS = [
+  { id: "instagram", label: "Instagram" },
+  { id: "twitter", label: "Twitter/X" },
+  { id: "reddit", label: "Reddit" },
+];
 
 const createEmptyRecap = ({ summoner, regionLabel }) => ({
   summoner: summoner || "Summoner#TAG",
@@ -173,13 +178,6 @@ const buildProfileIconUrl = (iconId) =>
     ? `https://ddragon.leagueoflegends.com/cdn/${DATA_DRAGON_VERSION}/img/profileicon/${iconId}.png`
     : null;
 
-const formatQueueLabel = (queueType = "") => {
-  if (queueType.includes("SOLO")) return "Ranked Solo/Duo";
-  if (queueType.includes("FLEX")) return "Ranked Flex";
-  if (queueType.includes("TFT")) return "TFT";
-  return queueType.replace(/_/g, " ").toLowerCase();
-};
-
 const formatDateLabel = (isoString) => {
   if (!isoString) return null;
   try {
@@ -193,6 +191,72 @@ const formatDateLabel = (isoString) => {
   } catch {
     return null;
   }
+};
+
+const buildIdentityShareImage = ({
+  summoner,
+  subtitle,
+  winRate,
+  kdaRatio,
+  avgGame,
+  regionLabel,
+}) => {
+  if (typeof document === "undefined") return null;
+  const size = 900;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  const gradient = ctx.createLinearGradient(0, 0, size, size);
+  gradient.addColorStop(0, "#050817");
+  gradient.addColorStop(0.5, "#0f172a");
+  gradient.addColorStop(1, "#1d1342");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+
+  ctx.strokeStyle = "rgba(124, 58, 237, 0.35)";
+  ctx.lineWidth = 6;
+  ctx.strokeRect(40, 40, size - 80, size - 80);
+
+  ctx.fillStyle = "rgba(226, 232, 240, 0.7)";
+  ctx.font = "bold 26px 'Poppins', sans-serif";
+  ctx.textBaseline = "top";
+  ctx.fillText("ACCOUNT SNAPSHOT", 80, 80);
+
+  ctx.fillStyle = "#f8fafc";
+  ctx.font = "700 64px 'Poppins', sans-serif";
+  ctx.fillText(summoner, 80, 140);
+
+  ctx.fillStyle = "rgba(226, 232, 240, 0.85)";
+  ctx.font = "400 28px 'Poppins', sans-serif";
+  ctx.fillText(subtitle, 80, 220);
+
+  const stats = [
+    { label: "Win rate", value: winRate },
+    { label: "KDA", value: kdaRatio },
+    { label: "Avg game", value: avgGame },
+  ];
+  ctx.font = "600 28px 'Poppins', sans-serif";
+  stats.forEach((stat, index) => {
+    const x = 80 + index * 240;
+    ctx.fillStyle = "rgba(148, 163, 184, 0.8)";
+    ctx.fillText(stat.label.toUpperCase(), x, 310);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "700 54px 'Poppins', sans-serif";
+    ctx.fillText(String(stat.value || "—"), x, 380);
+    ctx.font = "600 28px 'Poppins', sans-serif";
+  });
+
+  ctx.fillStyle = "rgba(148, 163, 184, 0.9)";
+  ctx.font = "500 26px 'Poppins', sans-serif";
+  ctx.fillText(`Region · ${regionLabel}`, 80, 500);
+
+  ctx.font = "400 22px 'Poppins', sans-serif";
+  ctx.fillText("Share your recap at riot-rift.com", 80, 560);
+
+  return canvas.toDataURL("image/png");
 };
 
 const toRadians = (degrees) => (degrees * Math.PI) / 180;
@@ -376,9 +440,12 @@ function App() {
   const [advancedInsight, setAdvancedInsight] = useState(null);
   const [hasLiveInsights, setHasLiveInsights] = useState(false);
   const [aiError, setAiError] = useState("");
+  const [isIdentityShareMenuOpen, setIsIdentityShareMenuOpen] = useState(false);
+  const [identityShareStatus, setIdentityShareStatus] = useState("");
   const introDelayTimeoutRef = useRef(null);
   const introHideTimeoutRef = useRef(null);
   const aiStatsRef = useRef(null);
+  const shareMenuRef = useRef(null);
 
   useEffect(() => {
     introDelayTimeoutRef.current = setTimeout(() => {
@@ -411,6 +478,26 @@ function App() {
     return () => clearTimeout(timer);
   }, [shareFeedback]);
 
+  useEffect(() => {
+    if (!identityShareStatus) return;
+    const timer = setTimeout(() => setIdentityShareStatus(""), 2600);
+    return () => clearTimeout(timer);
+  }, [identityShareStatus]);
+
+  useEffect(() => {
+    if (typeof document === "undefined" || !isIdentityShareMenuOpen) return;
+    const handleClick = (event) => {
+      if (
+        shareMenuRef.current &&
+        !shareMenuRef.current.contains(event.target)
+      ) {
+        setIsIdentityShareMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [isIdentityShareMenuOpen]);
+
   const regionDetails = useMemo(
     () => REGION_OPTIONS.find((option) => option.value === region),
     [region]
@@ -439,7 +526,6 @@ function App() {
   );
 
   const resolvedProfile = hasLiveInsights ? profileInsight : null;
-  const resolvedLeague = hasLiveInsights ? leagueInsight : [];
   const resolvedStatus = hasLiveInsights ? statusInsight : null;
   const resolvedAdvanced = hasLiveInsights ? advancedInsight : null;
 
@@ -447,22 +533,6 @@ function App() {
     () => buildProfileIconUrl(resolvedProfile?.iconId),
     [resolvedProfile]
   );
-
-  const soloQueueEntry = resolvedLeague.find(
-    (entry) => entry.queueType === "RANKED_SOLO_5x5"
-  );
-  const anchorRank = soloQueueEntry || resolvedLeague[0];
-  const rankLabel = anchorRank
-    ? `${anchorRank.tier} ${anchorRank.rank} · ${anchorRank.leaguePoints} LP`
-    : hasLiveInsights
-    ? "Unranked"
-    : "Awaiting live data";
-  const rankQueueLabel = anchorRank
-    ? formatQueueLabel(anchorRank.queueType)
-    : "Ranked ladder";
-  const rankRecord = anchorRank
-    ? `${anchorRank.wins}W / ${anchorRank.losses}L (${anchorRank.winRate}% WR)`
-    : "Play a ranked game to surface ladder data.";
 
   const incidents = resolvedStatus?.incidents || [];
   const maintenances = resolvedStatus?.maintenances || [];
@@ -628,6 +698,39 @@ function App() {
         break;
       default:
         break;
+    }
+  };
+
+  const handleIdentityShare = (platform) => {
+    try {
+      if (typeof document === "undefined") {
+        throw new Error("Share not available in this environment.");
+      }
+      const imageUrl = buildIdentityShareImage({
+        summoner: resolvedProfile?.summonerName || recapData.summoner,
+        subtitle: `Level ${resolvedProfile?.level ?? "—"} · ${
+          resolvedProfile?.platform || recapData.regionLabel || "—"
+        }`,
+        winRate: `${winRate}%`,
+        kdaRatio,
+        avgGame: resolvedAdvanced?.avgGameDurationLabel || "—",
+        regionLabel: recapData.regionLabel,
+      });
+      if (!imageUrl) {
+        throw new Error("Unable to generate share image.");
+      }
+      const link = document.createElement("a");
+      link.href = imageUrl;
+      link.download = `${recapData.summoner}-${platform}-snapshot.png`;
+      link.click();
+      setIdentityShareStatus(
+        `Image saved for ${platform}. Finish the post in their app.`
+      );
+    } catch (shareError) {
+      console.error(shareError);
+      setIdentityShareStatus("Share export failed. Please try again.");
+    } finally {
+      setIsIdentityShareMenuOpen(false);
     }
   };
 
@@ -825,24 +928,54 @@ function App() {
               <div className="data-hero">
                 <article className="insight-card identity-card">
                   <div className="identity-card__header">
-                    <div className="identity-card__avatar">
-                      {profileIconUrl ? (
-                        <img src={profileIconUrl} alt="Summoner icon" />
-                      ) : (
-                        <span>
-                          {recapData.summoner?.charAt(0)?.toUpperCase() || "?"}
-                        </span>
-                      )}
+                    <div className="identity-card__profile">
+                      <div className="identity-card__avatar">
+                        {profileIconUrl ? (
+                          <img src={profileIconUrl} alt="Summoner icon" />
+                        ) : (
+                          <span>
+                            {recapData.summoner?.charAt(0)?.toUpperCase() || "?"}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="recap__eyebrow">Account snapshot</p>
+                        <h2>
+                          {resolvedProfile?.summonerName || recapData.summoner}
+                        </h2>
+                        <p className="identity-card__meta">
+                          Level {resolvedProfile?.level ?? "—"} ·{" "}
+                          {resolvedProfile?.platform ||
+                            recapData.regionLabel ||
+                            "—"}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="recap__eyebrow">Account snapshot</p>
-                      <h2>{resolvedProfile?.summonerName || recapData.summoner}</h2>
-                      <p className="identity-card__meta">
-                        Level {resolvedProfile?.level ?? "—"} ·{" "}
-                        {resolvedProfile?.platform ||
-                          recapData.regionLabel ||
-                          "—"}
-                      </p>
+                    <div className="identity-card__share" ref={shareMenuRef}>
+                      <button
+                        type="button"
+                        className="identity-card__share-button"
+                        onClick={() =>
+                          setIsIdentityShareMenuOpen((prev) => !prev)
+                        }
+                        aria-expanded={isIdentityShareMenuOpen}
+                      >
+                        Share
+                      </button>
+                      {isIdentityShareMenuOpen && (
+                        <div className="identity-card__share-menu">
+                          <p>Export for</p>
+                          {IDENTITY_SHARE_PLATFORMS.map((platform) => (
+                            <button
+                              key={platform.id}
+                              type="button"
+                              onClick={() => handleIdentityShare(platform.id)}
+                            >
+                              {platform.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="identity-card__stats">
@@ -862,14 +995,14 @@ function App() {
                     </div>
                   </div>
                   <div className="identity-card__footer">
-                    <div className="rank-chip">
-                      <span>{rankQueueLabel}</span>
-                      <p>{rankLabel}</p>
-                      <small>{rankRecord}</small>
-                    </div>
                     {lastActiveLabel && (
                       <span className="identity-card__activity">
                         Last active · {lastActiveLabel}
+                      </span>
+                    )}
+                    {identityShareStatus && (
+                      <span className="identity-card__share-status">
+                        {identityShareStatus}
                       </span>
                     )}
                   </div>
