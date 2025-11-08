@@ -2,6 +2,7 @@ import base64
 import json
 import os
 from collections import Counter
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
@@ -316,6 +317,182 @@ def _build_recap_payload(
     }
 
 
+def _build_profile_payload(
+    riot_id: str, platform_host: str, summoner_data: Optional[Dict[str, Any]]
+) -> Dict[str, Any]:
+    profile = {
+        "riotId": riot_id,
+        "platform": platform_host.upper(),
+    }
+    if not summoner_data:
+        return profile
+
+    profile.update(
+        {
+            "summonerName": summoner_data.get("name"),
+            "level": summoner_data.get("summonerLevel"),
+            "iconId": summoner_data.get("profileIconId"),
+        }
+    )
+
+    revision_ms = summoner_data.get("revisionDate")
+    if isinstance(revision_ms, (int, float)):
+        try:
+            profile["lastActiveIso"] = (
+                datetime.fromtimestamp(revision_ms / 1000, tz=timezone.utc)
+                .isoformat()
+                .replace("+00:00", "Z")
+            )
+        except (OSError, OverflowError, ValueError):
+            pass
+
+    return profile
+
+
+def _simplify_league_entries(entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    simplified: List[Dict[str, Any]] = []
+    for entry in entries or []:
+        wins = entry.get("wins", 0)
+        losses = entry.get("losses", 0)
+        total_games = wins + losses
+        win_rate = round(_safe_div(wins, total_games) * 100, 1) if total_games else 0.0
+        simplified.append(
+            {
+                "queueType": entry.get("queueType"),
+                "tier": entry.get("tier"),
+                "rank": entry.get("rank"),
+                "leaguePoints": entry.get("leaguePoints"),
+                "wins": wins,
+                "losses": losses,
+                "hotStreak": entry.get("hotStreak"),
+                "veteran": entry.get("veteran"),
+                "freshBlood": entry.get("freshBlood"),
+                "inactive": entry.get("inactive"),
+                "miniSeries": entry.get("miniSeries"),
+                "winRate": win_rate,
+            }
+        )
+    return simplified
+
+
+def _pick_locale_content(
+    entries: Optional[Any], preferred_locale: str = "en_US"
+) -> Optional[str]:
+    if not entries:
+        return None
+
+    if isinstance(entries, dict):
+        entries = [entries]
+
+    for entry in entries:
+        if isinstance(entry, dict) and entry.get("locale") == preferred_locale:
+            return entry.get("content") or entry.get("translation")
+
+    first = entries[0] if entries else None
+    if isinstance(first, dict):
+        return first.get("content") or first.get("translation")
+    return None
+
+
+def _simplify_status_entries(entries: Optional[List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
+    simplified: List[Dict[str, Any]] = []
+    for entry in entries or []:
+        updates = entry.get("updates") or []
+        latest_update = updates[0] if updates else {}
+        simplified.append(
+            {
+                "id": entry.get("id"),
+                "title": _pick_locale_content(entry.get("titles")),
+                "status": entry.get("status"),
+                "severity": entry.get("severity"),
+                "createdAt": entry.get("created_at"),
+                "updatedAt": latest_update.get("updated_at") or entry.get("updated_at"),
+                "message": _pick_locale_content(latest_update.get("translations")),
+            }
+        )
+    return simplified
+
+
+def _build_platform_status_payload(
+    status_data: Optional[Dict[str, Any]],
+    platform_host: str,
+    platform_name: Optional[str],
+) -> Dict[str, Any]:
+    payload = {
+        "name": platform_name or platform_host.upper(),
+        "slug": platform_host,
+        "locales": status_data.get("locales") if status_data else None,
+        "incidents": [],
+        "maintenances": [],
+    }
+
+    if status_data:
+        payload["incidents"] = _simplify_status_entries(status_data.get("incidents"))
+        payload["maintenances"] = _simplify_status_entries(status_data.get("maintenances"))
+
+    return payload
+
+
+def _build_advanced_metrics(matches: List[Dict[str, Any]]) -> Dict[str, Any]:
+    if not matches:
+        return {}
+
+    total_duration = sum(entry.get("duration_seconds", 0) or 0 for entry in matches)
+    avg_duration = _safe_div(total_duration, len(matches))
+    total_damage = sum(entry.get("damage_champs", 0) or 0 for entry in matches)
+    minutes_played = total_duration / 60 if total_duration else 0
+    damage_per_min = _safe_div(total_damage, minutes_played)
+    avg_kp = _safe_div(
+        sum(entry.get("kill_participation", 0) or 0 for entry in matches), len(matches)
+    )
+    avg_vision = _safe_div(
+        sum(entry.get("vision_score", 0) or 0 for entry in matches), len(matches)
+    )
+    avg_objective = _safe_div(
+        sum(entry.get("objective_damage", 0) or 0 for entry in matches), len(matches)
+    )
+    objective_focus_rate = _safe_div(
+        sum(1 for entry in matches if (entry.get("objective_damage") or 0) >= 15000),
+        len(matches),
+    )
+    vision_control_rate = _safe_div(
+        sum(1 for entry in matches if (entry.get("vision_score") or 0) >= 40),
+        len(matches),
+    )
+
+    champ_counter = Counter(entry.get("champion") or "Unknown" for entry in matches)
+    role_counter = Counter(entry.get("role") or "FLEX" for entry in matches)
+    clutch_game = max(matches, key=lambda entry: entry.get("hero_score", 0), default=None)
+
+    return {
+        "avgGameDurationLabel": _format_duration(avg_duration),
+        "avgGameDurationMinutes": round(_safe_div(avg_duration, 60), 1),
+        "damagePerMinute": round(damage_per_min, 1),
+        "killParticipation": round(avg_kp, 1),
+        "visionScore": round(avg_vision, 1),
+        "objectiveDamage": round(avg_objective),
+        "objectiveFocusRate": round(objective_focus_rate * 100, 1),
+        "visionControlRate": round(vision_control_rate * 100, 1),
+        "championPool": [
+            {"champion": champ, "count": count}
+            for champ, count in champ_counter.most_common(5)
+        ],
+        "roleDistribution": [
+            {"role": role, "count": count}
+            for role, count in role_counter.most_common(5)
+        ],
+        "clutchGame": {
+            "champion": clutch_game["champion"],
+            "matchId": clutch_game.get("matchId") or clutch_game.get("id"),
+            "kda": clutch_game["kda"],
+            "highlight": clutch_game["highlight_tag"],
+            "killParticipation": clutch_game["kill_participation"],
+        }
+        if clutch_game
+        else None,
+    }
+
+
 # ---------- Lambda entry ----------
 def lambda_handler(event, context):
     method = (
@@ -399,8 +576,10 @@ def lambda_handler(event, context):
         platform_host = platform_host or DEFAULT_PLATFORM_BY_REGION.get(region, "na1")
 
         # Step 4: Enriched data (Summoner + League + Status)
+        summoner_data: Optional[Dict[str, Any]] = None
         league_entries: List[Dict[str, Any]] = []
         platform_name = None
+        status_data: Optional[Dict[str, Any]] = None
         try:
             summoner_url = (
                 f"https://{platform_host}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{puuid}"
@@ -421,6 +600,7 @@ def lambda_handler(event, context):
             platform_name = status_data.get("name")
         except RuntimeError:
             platform_name = platform_host.upper()
+            status_data = None
 
         recap_payload = _build_recap_payload(
             f"{game_name}#{tag_line}",
@@ -429,6 +609,18 @@ def lambda_handler(event, context):
             league_entries,
             platform_name,
         )
+        profile_payload = _build_profile_payload(
+            f"{game_name}#{tag_line}",
+            platform_host,
+            summoner_data,
+        )
+        league_payload = _simplify_league_entries(league_entries)
+        platform_payload = _build_platform_status_payload(
+            status_data,
+            platform_host,
+            platform_name,
+        )
+        advanced_metrics = _build_advanced_metrics(detailed_entries)
 
         return _build_response(
             event,
@@ -438,6 +630,10 @@ def lambda_handler(event, context):
                 "region": region,
                 "matches": trimmed_match_ids,
                 "recap": recap_payload,
+                "profile": profile_payload,
+                "leagueSummary": league_payload,
+                "platformStatus": platform_payload,
+                "advancedMetrics": advanced_metrics,
             },
         )
 

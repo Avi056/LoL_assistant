@@ -1,66 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 
+const buildPublicAssetUrl = (fileName) => {
+  const base = process.env.PUBLIC_URL ?? "";
+  const normalizedBase = base.endsWith("/") ? base.slice(0, -1) : base;
+  return `${normalizedBase}/assets/${encodeURI(fileName)}`;
+};
+
 const INTRO_BACKGROUND_ASSET = "dark blue league of legends background.jpg";
 const LEAGUE_LOGO_ASSET = "League-of-Legends-Logo.png";
 
-const normalizeFileName = (fileName) => fileName.replace(/^\.\/|^\/+/, "");
-
-const encodePath = (fileName) =>
-  normalizeFileName(fileName)
-    .split("/")
-    .map((segment) => encodeURIComponent(segment))
-    .join("/");
-
-const createAssetCandidates = (fileName) => {
-  if (!fileName) return [];
-  if (/^https?:\/\//i.test(fileName)) return [fileName];
-
-  const base = process.env.PUBLIC_URL ?? "";
-  const normalizedBase = base.endsWith("/") ? base.slice(0, -1) : base;
-  const normalizedFile = normalizeFileName(fileName);
-  const encodedFile = encodePath(fileName);
-
-  const candidates = [
-    `${normalizedBase}/${encodedFile}`,
-    `${normalizedBase}/${normalizedFile}`,
-    `${normalizedBase}/assets/${encodedFile}`,
-    `${normalizedBase}/assets/${normalizedFile}`,
-    encodedFile,
-    normalizedFile,
-    fileName,
-  ];
-
-  return Array.from(
-    new Set(candidates.filter((candidate) => candidate && candidate !== ""))
-  );
-};
-
-const useAssetSource = (fileName) => {
-  const candidates = useMemo(() => createAssetCandidates(fileName), [fileName]);
-  const [candidateIndex, setCandidateIndex] = useState(0);
-
-  useEffect(() => {
-    setCandidateIndex(0);
-  }, [candidates]);
-
-  const handleError = useCallback(() => {
-    setCandidateIndex((index) => {
-      if (index + 1 < candidates.length) {
-        return index + 1;
-      }
-      return index;
-    });
-  }, [candidates.length]);
-
-  const currentSource = candidates[candidateIndex] ?? "";
-  const hasFallback = candidateIndex + 1 < candidates.length;
-
-  return {
-    src: currentSource,
-    onError: hasFallback ? handleError : undefined,
-  };
-};
+const introBackground = buildPublicAssetUrl(INTRO_BACKGROUND_ASSET);
+const leagueLogo = buildPublicAssetUrl(LEAGUE_LOGO_ASSET);
 
 const REGION_OPTIONS = [
   { value: "ASIA", label: "Asia", description: "KR, JP, OCE, PH, SG" },
@@ -68,172 +19,116 @@ const REGION_OPTIONS = [
   { value: "EUROPE", label: "Europe", description: "EUW, EUNE, TR, RU" },
 ];
 
-const APP_SHARE_URL = "https://main.d4ccg2oosnodu.amplifyapp.com";
+const APP_SHARE_URL = "https://main.dmmttg0yma1yv.amplifyapp.com/";
+const DATA_DRAGON_VERSION = "14.24.1";
+const API_URL =
+  "https://fiauf5t7o7.execute-api.us-east-1.amazonaws.com/InitialStage/matches";
 
-const SAMPLE_RECAP = {
+const createEmptyRecap = ({ summoner, regionLabel }) => ({
+  summoner: summoner || "Summoner#TAG",
+  regionLabel: regionLabel || REGION_OPTIONS[0].label,
   winDistribution: [
-    { label: "Wins", value: 21 },
-    { label: "Losses", value: 7 },
-    { label: "Remakes", value: 1 },
+    { label: "Wins", value: 0 },
+    { label: "Losses", value: 0 },
+    { label: "Remakes", value: 0 },
   ],
   kda: {
-    kills: 10.2,
-    deaths: 3.2,
-    assists: 12.9,
-    streak: 8,
-    csPerMin: 7.6,
-    goldPerMin: 438,
+    kills: 0,
+    deaths: 0,
+    assists: 0,
+    streak: 0,
+    csPerMin: 0,
+    goldPerMin: 0,
   },
-  matchHistory: [
-    {
-      id: "NA1-5234509821",
-      champion: "Ashe",
-      role: "Bot",
-      result: "Win",
-      kda: "13 / 1 / 16",
-      csPerMin: 8.2,
-      damage: "33.4k dmg",
-      duration: "31:08",
-      highlightTag: "Quadra kill",
-    },
-    {
-      id: "NA1-5234402719",
-      champion: "Kai'Sa",
-      role: "Bot",
-      result: "Win",
-      kda: "9 / 2 / 10",
-      csPerMin: 7.9,
-      damage: "28.4k dmg",
-      duration: "29:42",
-      highlightTag: "Clutch steal",
-    },
-    {
-      id: "NA1-5234301184",
-      champion: "Caitlyn",
-      role: "Bot",
-      result: "Loss",
-      kda: "6 / 5 / 7",
-      csPerMin: 7.1,
-      damage: "24.6k dmg",
-      duration: "34:05",
-      highlightTag: "Siege expert",
-    },
-    {
-      id: "NA1-5234205617",
-      champion: "Aphelios",
-      role: "Bot",
-      result: "Win",
-      kda: "11 / 2 / 12",
-      csPerMin: 7.4,
-      damage: "30.1k dmg",
-      duration: "28:56",
-      highlightTag: "Baron flip",
-    },
-    {
-      id: "NA1-5234100032",
-      champion: "Jhin",
-      role: "Bot",
-      result: "Win",
-      kda: "10 / 3 / 11",
-      csPerMin: 6.8,
-      damage: "25.1k dmg",
-      duration: "31:11",
-      highlightTag: "Ace closer",
-    },
-  ],
-  playstyleTags: [
-    "Aggressive Marksman",
-    "Objective Hunter",
-    "Vision Controller",
-    "Teamfight Anchor",
-  ],
-  highlightMoments: [
-    {
-      title: "Arrow that flipped the Baron fight",
-      description:
-        "28:45 — Crystal Arrow snipes the enemy jungler, turning a 4v5 Baron into a clean ace.",
-    },
-    {
-      title: "Perfect vision lockdown",
-      description:
-        "Averaged 5.4 control wards per game, denying 73% of enemy ward placements around objectives.",
-    },
-    {
-      title: "Impeccable kiting finish",
-      description:
-        "Final Elder stand showcased flawless kiting with two resets and a secure objective.",
-    },
-  ],
-  lastGamesCount: 10,
-  trendFocus: "Plays for late-game teamfights",
-};
-
-const createRecapData = ({ summoner, regionLabel }) => ({
-  summoner,
-  regionLabel,
-  winDistribution: SAMPLE_RECAP.winDistribution.map((segment) => ({
-    ...segment,
-  })),
-  kda: { ...SAMPLE_RECAP.kda },
-  matchHistory: SAMPLE_RECAP.matchHistory.map((match) => ({ ...match })),
-  playstyleTags: [...SAMPLE_RECAP.playstyleTags],
-  highlightMoments: SAMPLE_RECAP.highlightMoments.map((moment) => ({
-    ...moment,
-  })),
-  lastGamesCount: SAMPLE_RECAP.lastGamesCount,
-  trendFocus: SAMPLE_RECAP.trendFocus,
+  matchHistory: [],
+  playstyleTags: [],
+  highlightMoments: [],
+  lastGamesCount: 0,
+  trendFocus: "Lock in your Riot ID to surface personalized trends.",
 });
+
+const normalizeRecapPayload = (payload, fallbackSummoner, regionLabel) => {
+  if (!payload) {
+    return createEmptyRecap({ summoner: fallbackSummoner, regionLabel });
+  }
+  const base = createEmptyRecap({ summoner: fallbackSummoner, regionLabel });
+  return {
+    ...base,
+    ...payload,
+    summoner: payload.summoner || fallbackSummoner,
+    regionLabel: payload.regionLabel || regionLabel,
+    winDistribution:
+      payload.winDistribution?.length === 3
+        ? payload.winDistribution
+        : base.winDistribution,
+    kda: {
+      ...base.kda,
+      ...(payload.kda || {}),
+    },
+    matchHistory: payload.matchHistory || [],
+    playstyleTags: payload.playstyleTags || [],
+    highlightMoments: payload.highlightMoments || [],
+    lastGamesCount:
+      typeof payload.lastGamesCount === "number"
+        ? payload.lastGamesCount
+        : base.lastGamesCount,
+    trendFocus: payload.trendFocus || base.trendFocus,
+  };
+};
 
 const buildShareSummary = (recap, winRate, kdaRatio) => {
   const wins =
     recap.winDistribution.find((segment) => segment.label === "Wins")?.value ??
     0;
   const losses =
-    recap.winDistribution.find((segment) => segment.label === "Losses")?.value ??
-    0;
+    recap.winDistribution.find((segment) => segment.label === "Losses")
+      ?.value ?? 0;
   const topMatch = recap.matchHistory[0];
   const signaturePlay =
-    recap.highlightMoments[0]?.title || "Leaving unforgettable plays on the Rift";
+    recap.highlightMoments[0]?.title ||
+    topMatch?.highlightTag ||
+    "Clutch plays across the Rift";
 
   const matchLine = topMatch
     ? `${topMatch.result} as ${topMatch.champion} (${topMatch.kda})`
-    : "Stacking victories across the Rift";
+    : "Queue up to log fresh wins.";
 
   return [
-    `🎮 ${recap.summoner}'s LOL Forge Recap`,
+    `🎮 ${recap.summoner}'s Riot Rift Recap`,
     `📊 ${wins}W / ${losses}L (${winRate.toFixed(1)}% WR)`,
-    `⚔️ ${kdaRatio} KDA`,
-    `✨ Top moment: ${signaturePlay}`,
+    `⚔️ ${kdaRatio.toFixed(2)} KDA · ${recap.kda.csPerMin} CS/min · ${recap.kda.goldPerMin} GPM`,
+    `🎯 Focus: ${recap.trendFocus}`,
+    `✨ Highlight: ${signaturePlay}`,
     "",
     `${matchLine}`,
     "",
-    "🚀 Analyzed with AI insights!",
+    "📡 Every stat is sourced directly from Riot APIs.",
     `Check yours: ${APP_SHARE_URL}`,
   ].join("\n");
 };
 
 const buildAiNarrative = (recap, winRate, kdaRatio) => {
-  const favoriteChamp = recap.matchHistory[0]?.champion ?? "their mains";
+  const favoriteChamp = recap.matchHistory[0]?.champion ?? "your mains";
   const streak = recap.kda.streak;
   const standoutMoments = recap.highlightMoments
     .map((moment) => `• ${moment.title} — ${moment.description}`)
     .join("\n");
-  const tags = recap.playstyleTags.join(" · ");
+  const tags = recap.playstyleTags.join(" · ") || "Data incoming soon";
 
-  return `✨ ${recap.summoner}'s Rift Wrapped ✨
+  return `✨ ${recap.summoner}'s Riot Rift Recap ✨
 
 Across ${recap.lastGamesCount} games in ${recap.regionLabel}, ${
     recap.summoner
-  } locked in a ${winRate}% win rate while averaging a ${kdaRatio}:1 KDA. The longest win streak hit ${
+  } logged a ${winRate}% win rate while averaging a ${kdaRatio}:1 KDA. The longest win streak hit ${
     streak
-  } games, fueled by ${favoriteChamp} and razor-sharp late game instincts.
+  } games, led by ${favoriteChamp} and confident objective control.
 
 Playstyle remix: ${tags}.
 
 Standout moments:
-${standoutMoments}
+${standoutMoments || "• Pull fresh data to unlock highlight descriptions."}
 
-Keep the energy high, queue up, and let the next chapter drop. 🎶🗡️`;
+Live telemetry from Riot endpoints keeps the receipts. Queue up and write the next chapter. 🗡️`;
 };
 
 const copyTextToClipboard = async (text) => {
@@ -265,19 +160,46 @@ const copyTextToClipboard = async (text) => {
   }
 };
 
+const buildProfileIconUrl = (iconId) =>
+  iconId
+    ? `https://ddragon.leagueoflegends.com/cdn/${DATA_DRAGON_VERSION}/img/profileicon/${iconId}.png`
+    : null;
+
+const formatQueueLabel = (queueType = "") => {
+  if (queueType.includes("SOLO")) return "Ranked Solo/Duo";
+  if (queueType.includes("FLEX")) return "Ranked Flex";
+  if (queueType.includes("TFT")) return "TFT";
+  return queueType.replace(/_/g, " ").toLowerCase();
+};
+
+const formatDateLabel = (isoString) => {
+  if (!isoString) return null;
+  try {
+    const date = new Date(isoString);
+    return date.toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return null;
+  }
+};
+
 function App() {
   const [gameName, setGameName] = useState("");
   const [tagLine, setTagLine] = useState("");
   const [region, setRegion] = useState(REGION_OPTIONS[0].value);
   const [view, setView] = useState("form");
   const [recapData, setRecapData] = useState(() =>
-    createRecapData({
+    createEmptyRecap({
       summoner: "Summoner#TAG",
       regionLabel: REGION_OPTIONS[0].label,
     })
   );
   const [showIntro, setShowIntro] = useState(true);
-  const [introStage, setIntroStage] = useState("background");
+  const [introStage, setIntroStage] = useState("enter");
   const [animateApp, setAnimateApp] = useState(false);
   const [shareFeedback, setShareFeedback] = useState("");
   const [recapNarrative, setRecapNarrative] = useState("");
@@ -287,34 +209,27 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [copyFeedback, setCopyFeedback] = useState("");
+  const [profileInsight, setProfileInsight] = useState(null);
+  const [leagueInsight, setLeagueInsight] = useState([]);
+  const [statusInsight, setStatusInsight] = useState(null);
+  const [advancedInsight, setAdvancedInsight] = useState(null);
+  const [hasLiveInsights, setHasLiveInsights] = useState(false);
   const copyTimeoutRef = useRef(null);
-  const introLogoTimeoutRef = useRef(null);
-  const introExitTimeoutRef = useRef(null);
+  const introDelayTimeoutRef = useRef(null);
   const introHideTimeoutRef = useRef(null);
-  const { src: introBackgroundSrc, onError: handleIntroBackgroundError } =
-    useAssetSource(INTRO_BACKGROUND_ASSET);
-  const { src: leagueLogoSrc, onError: handleLeagueLogoError } =
-    useAssetSource(LEAGUE_LOGO_ASSET);
 
   useEffect(() => {
-    introLogoTimeoutRef.current = setTimeout(() => {
-      setIntroStage("logo");
-    }, 1500);
-
-    introExitTimeoutRef.current = setTimeout(() => {
+    introDelayTimeoutRef.current = setTimeout(() => {
       setIntroStage("exit");
       introHideTimeoutRef.current = setTimeout(() => {
         setShowIntro(false);
         setAnimateApp(true);
-      }, 900);
-    }, 3600);
+      }, 600);
+    }, 3000);
 
     return () => {
-      if (introLogoTimeoutRef.current) {
-        clearTimeout(introLogoTimeoutRef.current);
-      }
-      if (introExitTimeoutRef.current) {
-        clearTimeout(introExitTimeoutRef.current);
+      if (introDelayTimeoutRef.current) {
+        clearTimeout(introDelayTimeoutRef.current);
       }
       if (introHideTimeoutRef.current) {
         clearTimeout(introHideTimeoutRef.current);
@@ -345,15 +260,18 @@ function App() {
     [region]
   );
 
-  const totalGames = recapData.winDistribution.reduce(
-    (acc, segment) => acc + segment.value,
-    0
+  const totalGames = useMemo(
+    () => recapData.winDistribution.reduce((acc, segment) => acc + segment.value, 0),
+    [recapData.winDistribution]
   );
-  const winsSegment = recapData.winDistribution.find(
-    (segment) => segment.label === "Wins"
-  );
+  const winsSegment =
+    recapData.winDistribution.find((segment) => segment.label === "Wins") ??
+    { value: 0 };
+  const lossesSegment =
+    recapData.winDistribution.find((segment) => segment.label === "Losses") ??
+    { value: 0 };
   const winRate = totalGames
-    ? Math.round(((winsSegment?.value ?? 0) / totalGames) * 100)
+    ? Math.round(((winsSegment.value ?? 0) / totalGames) * 100)
     : 0;
   const kdaRatio = (
     (recapData.kda.kills + recapData.kda.assists) /
@@ -364,10 +282,49 @@ function App() {
     [recapData, winRate, kdaRatio]
   );
 
+  const resolvedProfile = hasLiveInsights ? profileInsight : null;
+  const resolvedLeague = hasLiveInsights ? leagueInsight : [];
+  const resolvedStatus = hasLiveInsights ? statusInsight : null;
+  const resolvedAdvanced = hasLiveInsights ? advancedInsight : null;
+
+  const profileIconUrl = useMemo(
+    () => buildProfileIconUrl(resolvedProfile?.iconId),
+    [resolvedProfile]
+  );
+
+  const soloQueueEntry = resolvedLeague.find(
+    (entry) => entry.queueType === "RANKED_SOLO_5x5"
+  );
+  const anchorRank = soloQueueEntry || resolvedLeague[0];
+  const rankLabel = anchorRank
+    ? `${anchorRank.tier} ${anchorRank.rank} · ${anchorRank.leaguePoints} LP`
+    : hasLiveInsights
+    ? "Unranked"
+    : "Awaiting live data";
+  const rankQueueLabel = anchorRank
+    ? formatQueueLabel(anchorRank.queueType)
+    : "Ranked ladder";
+  const rankRecord = anchorRank
+    ? `${anchorRank.wins}W / ${anchorRank.losses}L (${anchorRank.winRate}% WR)`
+    : "Play a ranked game to surface ladder data.";
+
+  const incidents = resolvedStatus?.incidents || [];
+  const maintenances = resolvedStatus?.maintenances || [];
+  const statusMessage =
+    incidents[0]?.message ||
+    incidents[0]?.title ||
+    maintenances[0]?.message ||
+    maintenances[0]?.title ||
+    "No active incidents reported by Riot for this shard.";
+
+  const championPool = resolvedAdvanced?.championPool ?? [];
+  const roleDistribution = resolvedAdvanced?.roleDistribution ?? [];
+  const clutchGame = resolvedAdvanced?.clutchGame;
   const matchHistoryEntries = recapData.matchHistory || [];
   const highlightEntries = recapData.highlightMoments || [];
   const playstyleTags = recapData.playstyleTags || [];
   const primaryHighlight = highlightEntries[0];
+  const lastActiveLabel = formatDateLabel(resolvedProfile?.lastActiveIso);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -384,9 +341,6 @@ function App() {
     setCopyFeedback("");
 
     try {
-      const API_URL =
-        "https://fiauf5t7o7.execute-api.us-east-1.amazonaws.com/InitialStage/matches";
-
       const response = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -400,7 +354,9 @@ function App() {
       let payload = null;
       try {
         payload = await response.json();
-      } catch {}
+      } catch {
+        payload = null;
+      }
 
       if (!response.ok) {
         const message =
@@ -415,35 +371,22 @@ function App() {
         return;
       }
 
-      setMatches(payload.matches || []);
-      const resolvedSummoner = payload.summoner ?? `${trimmedName}#${trimmedTag}`;
-      setSummonerLabel(resolvedSummoner);
+      const resolvedSummoner =
+        payload.summoner ?? `${trimmedName}#${trimmedTag}`;
+      const normalizedRecap = normalizeRecapPayload(
+        payload.recap,
+        resolvedSummoner,
+        regionLabel
+      );
 
-      if (payload.recap) {
-        setRecapData({
-          ...payload.recap,
-          summoner: payload.recap.summoner || resolvedSummoner,
-          regionLabel: payload.recap.regionLabel || regionLabel,
-          winDistribution:
-            payload.recap.winDistribution || SAMPLE_RECAP.winDistribution,
-          kda: {
-            ...SAMPLE_RECAP.kda,
-            ...(payload.recap.kda || {}),
-          },
-          matchHistory: payload.recap.matchHistory || [],
-          playstyleTags: payload.recap.playstyleTags || [],
-          highlightMoments: payload.recap.highlightMoments || [],
-          lastGamesCount: payload.recap.lastGamesCount ?? 0,
-          trendFocus: payload.recap.trendFocus || SAMPLE_RECAP.trendFocus,
-        });
-      } else {
-        setRecapData(
-          createRecapData({
-            summoner: resolvedSummoner,
-            regionLabel,
-          })
-        );
-      }
+      setMatches(payload.matches || []);
+      setSummonerLabel(resolvedSummoner);
+      setRecapData(normalizedRecap);
+      setProfileInsight(payload.profile ?? null);
+      setLeagueInsight(payload.leagueSummary ?? []);
+      setStatusInsight(payload.platformStatus ?? null);
+      setAdvancedInsight(payload.advancedMetrics ?? null);
+      setHasLiveInsights(true);
       setRecapNarrative("");
       setView("recap");
       setAnimateApp(true);
@@ -491,23 +434,25 @@ function App() {
       case "discord":
         {
           const copied = await copyTextToClipboard(shareSummary);
-          if (copied) {
-            setShareFeedback(
-              "Recap copied. Paste it into your next Discord chat."
-            );
-          } else {
-            setShareFeedback(
-              "Copy failed. Please copy manually before posting to Discord."
-            );
-          }
-          window.open("https://discord.com/channels/@me", "_blank", "noopener,noreferrer");
+          setShareFeedback(
+            copied
+              ? "Recap copied. Paste it into your next Discord chat."
+              : "Copy failed. Please copy manually before posting to Discord."
+          );
+          window.open(
+            "https://discord.com/channels/@me",
+            "_blank",
+            "noopener,noreferrer"
+          );
         }
         break;
       case "copy":
         {
           const copied = await copyTextToClipboard(shareSummary);
           setShareFeedback(
-            copied ? "Recap copied to clipboard." : "Copy failed. Please copy manually."
+            copied
+              ? "Recap copied to clipboard."
+              : "Copy failed. Please copy manually."
           );
         }
         break;
@@ -540,16 +485,8 @@ function App() {
       {showIntro && (
         <div className={`intro-screen intro-screen--${introStage}`}>
           <img
-            className="intro-screen__background"
-            src={introBackgroundSrc}
-            onError={handleIntroBackgroundError}
-            alt="League of Legends backdrop"
-          />
-          <div className="intro-screen__glow" />
-          <img
             className="intro-screen__logo"
-            src={leagueLogoSrc}
-            onError={handleLeagueLogoError}
+            src={leagueLogo}
             alt="League of Legends logo"
           />
         </div>
@@ -562,9 +499,9 @@ function App() {
               <div className="card__header">
                 <h1 className="title">League of Legends Match Explorer</h1>
                 <p className="subtitle">
-                  Lock in your Riot ID and region to preview the new recap
-                  experience while the live data pipeline is under
-                  construction.
+                  Lock in your Riot ID and region to pull match history,
+                  account, league, platform-status, and macro insights directly
+                  from the Riot API stack.
                 </p>
               </div>
 
@@ -629,11 +566,11 @@ function App() {
             <section className="recap">
               <article className="ai-card ai-card--top">
                 <header className="ai-card__header">
-                  <h2>Spotify Wrapped-style recap</h2>
+                  <h2>AI headline</h2>
                   <p>
-                    Generate an AI-written story beat that captures your vibe on
-                    the Rift. Perfect for captions, reels, or keeping the hype
-                    rolling into the next queue.
+                    Generate a Spotify Wrapped-style voiceover rooted in the
+                    same Riot match, summoner, league, and status data powering
+                    the dashboard below.
                   </p>
                 </header>
                 <textarea
@@ -650,11 +587,10 @@ function App() {
                     onClick={handleGenerateRecap}
                     disabled={isGeneratingRecap}
                   >
-                    {isGeneratingRecap ? "Summoning AI…" : "Generate Recap"}
+                    {isGeneratingRecap ? "Summoning recap…" : "Generate Recap"}
                   </button>
                   <span className="ai-card__hint">
-                    Powered by AWS Bedrock-style storytelling using your latest
-                    performance.
+                    Powered exclusively by fresh Riot API pulls.
                   </span>
                 </div>
               </article>
@@ -664,79 +600,93 @@ function App() {
                   <p className="recap__eyebrow">Personalized recap</p>
                   <h1 className="recap__title">{recapData.summoner}</h1>
                   <p className="recap__meta">
-                    {recapData.regionLabel} · Last {recapData.lastGamesCount} games
+                    {recapData.regionLabel} · Last {recapData.lastGamesCount}{" "}
+                    games
                   </p>
                 </div>
-                <button
-                  type="button"
-                  className="ghost-button"
-                  onClick={handleBackToLookup}
-                >
-                  Back to lookup
-                </button>
-              </div>
-
-              <div className="story">
-                <div className="story__frame">
-                  <div className="story__header">
-                    <span className="story__badge">LOL Forge</span>
-                    <span className="story__season">
-                      Last {recapData.lastGamesCount} games · {recapData.regionLabel}
-                    </span>
-                  </div>
-                  <div className="story__hero">
-                    <p className="story__tagline">Your Rift Wrapped</p>
-                    <h2 className="story__stat">{winRate}%</h2>
-                    <p className="story__label">Win rate</p>
-                  </div>
-                  <div className="story__grid">
-                    <div className="story__tile">
-                      <span className="story__tile-label">KDA</span>
-                      <span className="story__tile-value">{kdaRatio}:1</span>
-                    </div>
-                    <div className="story__tile">
-                      <span className="story__tile-label">Streak</span>
-                      <span className="story__tile-value">
-                        {recapData.kda.streak} W
-                      </span>
-                    </div>
-                    <div className="story__tile">
-                      <span className="story__tile-label">CS / min</span>
-                      <span className="story__tile-value">
-                        {recapData.kda.csPerMin?.toFixed
-                          ? recapData.kda.csPerMin.toFixed(2)
-                          : recapData.kda.csPerMin}
-                      </span>
-                    </div>
-                    <div className="story__tile">
-                      <span className="story__tile-label">Gold / min</span>
-                      <span className="story__tile-value">
-                        {recapData.kda.goldPerMin}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="story__highlight">
-                    <span className="story__highlight-title">Highlight moment</span>
-                    <p>
-                      {primaryHighlight?.title ||
-                        matchHistoryEntries[0]?.highlightTag ||
-                        "Stacking wins across the Rift"}
-                    </p>
-                  </div>
-                  <div className="story__footer">
-                    <span>Swipe up</span>
-                    <strong>@lolforge</strong>
-                  </div>
+                <div className="banner__actions">
+                  <span
+                    className={`data-chip ${
+                      hasLiveInsights ? "data-chip--live" : "data-chip--sample"
+                    }`}
+                  >
+                    {hasLiveInsights ? "Live Riot data" : "Awaiting lookup"}
+                  </span>
+                  <button
+                    type="button"
+                    className="ghost-button"
+                    onClick={handleBackToLookup}
+                  >
+                    Back to lookup
+                  </button>
                 </div>
               </div>
 
-              <div className="stat-grid">
-                <article className="stat-card">
-                  <header className="stat-card__header">
-                    <h2>Win Distribution</h2>
-                    <span className="stat-card__sub">Win rate {winRate}%</span>
+              <div className="data-hero">
+                <article className="insight-card identity-card">
+                  <div className="identity-card__header">
+                    <div className="identity-card__avatar">
+                      {profileIconUrl ? (
+                        <img src={profileIconUrl} alt="Summoner icon" />
+                      ) : (
+                        <span>
+                          {recapData.summoner?.charAt(0)?.toUpperCase() || "?"}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <p className="recap__eyebrow">Account snapshot</p>
+                      <h2>{resolvedProfile?.summonerName || recapData.summoner}</h2>
+                      <p className="identity-card__meta">
+                        Level {resolvedProfile?.level ?? "—"} ·{" "}
+                        {resolvedProfile?.platform ||
+                          recapData.regionLabel ||
+                          "—"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="identity-card__stats">
+                    <div>
+                      <span>Win rate</span>
+                      <strong>{winRate}%</strong>
+                    </div>
+                    <div>
+                      <span>KDA</span>
+                      <strong>{kdaRatio}:1</strong>
+                    </div>
+                    <div>
+                      <span>Avg game</span>
+                      <strong>
+                        {resolvedAdvanced?.avgGameDurationLabel || "—"}
+                      </strong>
+                    </div>
+                  </div>
+                  <div className="identity-card__footer">
+                    <div className="rank-chip">
+                      <span>{rankQueueLabel}</span>
+                      <p>{rankLabel}</p>
+                      <small>{rankRecord}</small>
+                    </div>
+                    {lastActiveLabel && (
+                      <span className="identity-card__activity">
+                        Last active · {lastActiveLabel}
+                      </span>
+                    )}
+                  </div>
+                </article>
+
+                <article className="insight-card momentum-card">
+                  <header className="insight-card__header">
+                    <h3>Momentum tracker</h3>
+                    <span>
+                      {winsSegment.value ?? 0}W · {lossesSegment.value ?? 0}L ·{" "}
+                      {recapData.winDistribution.find(
+                        (segment) => segment.label === "Remakes"
+                      )?.value ?? 0}
+                      R
+                    </span>
                   </header>
-                  <div className="win-bar">
+                  <div className="win-bar win-bar--compact">
                     {recapData.winDistribution.map((segment) => (
                       <span
                         key={segment.label}
@@ -752,48 +702,74 @@ function App() {
                       />
                     ))}
                   </div>
-                  <ul className="win-legend">
-                    {recapData.winDistribution.map((segment) => (
-                      <li key={segment.label}>
-                        <span
-                          className={`win-legend__swatch win-legend__swatch--${segment.label.toLowerCase()}`}
-                        />
-                        <span className="win-legend__label">
-                          {segment.label}
-                        </span>
-                        <span className="win-legend__value">
-                          {segment.value} games
-                        </span>
-                      </li>
-                    ))}
+                  <ul className="insight-list">
+                    <li>
+                      <span>Avg duration</span>
+                      <strong>
+                        {resolvedAdvanced?.avgGameDurationLabel || "—"}
+                      </strong>
+                    </li>
+                    <li>
+                      <span>Damage / min</span>
+                      <strong>
+                        {resolvedAdvanced?.damagePerMinute
+                          ? `${resolvedAdvanced.damagePerMinute}`
+                          : "—"}
+                      </strong>
+                    </li>
+                    <li>
+                      <span>Kill participation</span>
+                      <strong>
+                        {resolvedAdvanced?.killParticipation
+                          ? `${resolvedAdvanced.killParticipation}%`
+                          : "—"}
+                      </strong>
+                    </li>
                   </ul>
                 </article>
 
+                <article className="insight-card status-card">
+                  <header className="insight-card__header">
+                    <h3>Platform status</h3>
+                    <span>{resolvedStatus?.name || recapData.regionLabel}</span>
+                  </header>
+                  <p className="status-card__message">{statusMessage}</p>
+                  <div className="status-card__tags">
+                    <span className="pill">
+                      Incidents {incidents.length}
+                    </span>
+                    <span className="pill">
+                      Maintenances {maintenances.length}
+                    </span>
+                  </div>
+                </article>
+              </div>
+
+              <div className="stat-grid stat-grid--expanded">
                 <article className="stat-card">
                   <header className="stat-card__header">
-                    <h2>KDA Breakdown</h2>
+                    <h2>KDA breakdown</h2>
                     <span className="stat-card__sub">
                       Average {kdaRatio}:1 across recent games
                     </span>
                   </header>
-                  <div className="kda-figure">{kdaRatio}:1</div>
-                  <div className="kda-breakdown">
+                  <div className="kda-grid">
                     <div>
-                      <span>Avg Kills</span>
+                      <span>Kills</span>
                       <strong>{recapData.kda.kills}</strong>
                     </div>
                     <div>
-                      <span>Avg Deaths</span>
+                      <span>Deaths</span>
                       <strong>{recapData.kda.deaths}</strong>
                     </div>
                     <div>
-                      <span>Avg Assists</span>
+                      <span>Assists</span>
                       <strong>{recapData.kda.assists}</strong>
                     </div>
                   </div>
-                  <div className="kda-tags">
+                  <div className="stat-chips">
                     <span className="accent-chip">
-                      Longest win streak: {recapData.kda.streak}
+                      Longest streak: {recapData.kda.streak}
                     </span>
                     <span className="accent-chip">
                       CS / min: {recapData.kda.csPerMin}
@@ -804,31 +780,82 @@ function App() {
                   </div>
                 </article>
 
-                <article className="stat-card stat-card--tags">
+                <article className="stat-card stat-card--macro">
                   <header className="stat-card__header">
-                    <h2>Playstyle Tags</h2>
+                    <h2>Macro & vision</h2>
                     <span className="stat-card__sub">
-                      {recapData.trendFocus}
+                      Data from match-v5 participant stats
                     </span>
                   </header>
-                  <div className="pill-row">
-                    {playstyleTags.map((tag) => (
-                      <span key={tag} className="pill">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
+                  <ul className="insight-list insight-list--two-col">
+                    <li>
+                      <span>Objective damage</span>
+                      <strong>
+                        {resolvedAdvanced?.objectiveDamage
+                          ? `${resolvedAdvanced.objectiveDamage.toLocaleString()}`
+                          : "—"}
+                      </strong>
+                    </li>
+                    <li>
+                      <span>Vision score</span>
+                      <strong>
+                        {resolvedAdvanced?.visionScore
+                          ? resolvedAdvanced.visionScore
+                          : "—"}
+                      </strong>
+                    </li>
+                    <li>
+                      <span>Obj focus rate</span>
+                      <strong>
+                        {resolvedAdvanced?.objectiveFocusRate
+                          ? `${resolvedAdvanced.objectiveFocusRate}%`
+                          : "—"}
+                      </strong>
+                    </li>
+                    <li>
+                      <span>Vision control rate</span>
+                      <strong>
+                        {resolvedAdvanced?.visionControlRate
+                          ? `${resolvedAdvanced.visionControlRate}%`
+                          : "—"}
+                      </strong>
+                    </li>
+                  </ul>
                   <p className="stat-card__note">
-                    Tags refresh each batch of games to reflect your evolving
-                    macro, mechanics, and team impact.
+                    Objective rate counts games with 15k+ objective damage,
+                    while vision rate tracks 40+ vision score games.
+                  </p>
+                </article>
+
+                <article className="stat-card stat-card--tags">
+                  <header className="stat-card__header">
+                    <h2>Playstyle tags</h2>
+                    <span className="stat-card__sub">{recapData.trendFocus}</span>
+                  </header>
+                  {playstyleTags.length > 0 ? (
+                    <div className="pill-row">
+                      {playstyleTags.map((tag) => (
+                        <span key={tag} className="pill">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="empty-state">
+                      Pull fresh games to classify your macro tendencies.
+                    </p>
+                  )}
+                  <p className="stat-card__note">
+                    Tags are rebuilt every lookup from Riot&apos;s raw match
+                    telemetry.
                   </p>
                 </article>
               </div>
 
-              <div className="recap__body">
+              <div className="insight-grid insight-grid--split">
                 <article className="history-card">
                   <header className="history-card__header">
-                    <h2>Match History</h2>
+                    <h2>Match history</h2>
                     <span>Last {recapData.lastGamesCount} games</span>
                   </header>
                   {matchHistoryEntries.length > 0 ? (
@@ -872,11 +899,30 @@ function App() {
                   )}
                 </article>
 
-                <article className="moments-card">
+                <article className="moments-card moments-card--clutch">
                   <header className="moments-card__header">
-                    <h2>Highlight Moments</h2>
-                    <span>Season-defining plays</span>
+                    <h2>Highlight moments</h2>
+                    <span>
+                      {clutchGame
+                        ? `Clutch: ${clutchGame.champion} (${clutchGame.kda})`
+                        : "Season-defining plays"}
+                    </span>
                   </header>
+                  {clutchGame && (
+                    <div className="clutch-card">
+                      <div>
+                        <p className="clutch-card__label">Highest hero score</p>
+                        <h3>{clutchGame.champion}</h3>
+                        <p className="clutch-card__meta">
+                          {clutchGame.kda} · {clutchGame.killParticipation}% KP
+                        </p>
+                      </div>
+                      <div className="clutch-card__tags">
+                        <span className="pill">{clutchGame.highlight}</span>
+                        <span className="pill">{clutchGame.matchId}</span>
+                      </div>
+                    </div>
+                  )}
                   {highlightEntries.length > 0 ? (
                     <ul className="highlight-list">
                       {highlightEntries.map((moment, index) => (
@@ -900,13 +946,128 @@ function App() {
                 </article>
               </div>
 
+              <article className="champion-card insight-card">
+                <header className="insight-card__header">
+                  <h3>Champion & role mix</h3>
+                  <span>Top pulls from match-v5</span>
+                </header>
+                <div className="champion-card__body">
+                  <div>
+                    <h4>Most played champs</h4>
+                    {championPool.length > 0 ? (
+                      <ul className="mini-list">
+                        {championPool.map((entry) => (
+                          <li key={entry.champion}>
+                            <span>{entry.champion}</span>
+                            <strong>{entry.count} games</strong>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="empty-state">No champion data yet.</p>
+                    )}
+                  </div>
+                  <div>
+                    <h4>Role distribution</h4>
+                    {roleDistribution.length > 0 ? (
+                      <ul className="mini-list">
+                        {roleDistribution.map((entry) => (
+                          <li key={entry.role}>
+                            <span>{entry.role}</span>
+                            <strong>{entry.count}</strong>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="empty-state">No role data yet.</p>
+                    )}
+                  </div>
+                </div>
+              </article>
+
+              <article className="insight-card league-card">
+                <header className="insight-card__header">
+                  <h3>League ladders</h3>
+                  <span>Direct from league-v4</span>
+                </header>
+                {resolvedLeague.length > 0 ? (
+                  <ul className="mini-list league-list">
+                    {resolvedLeague.map((entry) => (
+                      <li key={`${entry.queueType}-${entry.tier}-${entry.rank}`}>
+                        <div>
+                          <strong>{formatQueueLabel(entry.queueType)}</strong>
+                          <p>
+                            {entry.tier} {entry.rank} · {entry.leaguePoints} LP
+                          </p>
+                        </div>
+                        <div className="league-record">
+                          <span>
+                            {entry.wins}W / {entry.losses}L
+                          </span>
+                          <small>{entry.winRate}% WR</small>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="empty-state">
+                    Play ranked games to populate league insights.
+                  </p>
+                )}
+              </article>
+
+              <article className="insight-card status-log-card">
+                <header className="insight-card__header">
+                  <h3>Incident log</h3>
+                  <span>Latest messages from status-v4</span>
+                </header>
+                {incidents.length === 0 && maintenances.length === 0 ? (
+                  <p className="empty-state">
+                    No incidents or maintenances reported.
+                  </p>
+                ) : (
+                  <div className="status-log">
+                    {incidents.length > 0 && (
+                      <div>
+                        <h4>Incidents</h4>
+                        <ul className="status-log__list">
+                          {incidents.map((incident) => (
+                            <li key={incident.id}>
+                              <strong>{incident.title || incident.id}</strong>
+                              <p>{incident.message || "No message provided."}</p>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {maintenances.length > 0 && (
+                      <div>
+                        <h4>Maintenances</h4>
+                        <ul className="status-log__list">
+                          {maintenances.map((maintenance) => (
+                            <li key={maintenance.id}>
+                              <strong>
+                                {maintenance.title || maintenance.id}
+                              </strong>
+                              <p>
+                                {maintenance.message || "No message provided."}
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </article>
+
               <aside className="share-card">
                 <div>
                   <h2>Share your recap</h2>
                   <p>
                     Spotlight your climb with ready-to-post captions for X,
-                    Discord, or Reddit, complete with standout stats and
-                    moments.
+                    Discord, or Reddit, complete with standout stats sourced
+                    directly from Riot&apos;s data feeds.
                   </p>
                 </div>
                 <div className="share-card__actions">
@@ -945,7 +1106,7 @@ function App() {
                   )}
                   <div className="share-card__meta">
                     <span className="social-pill">#LeagueOfLegends</span>
-                    <span className="social-pill">#ClutchMoments</span>
+                    <span className="social-pill">#LiveRiotData</span>
                   </div>
                 </div>
               </aside>
@@ -955,7 +1116,8 @@ function App() {
                   <h2>Live match IDs</h2>
                   {summonerLabel && (
                     <p className="matches__meta">
-                      Showing latest games for <strong>{summonerLabel}</strong>
+                      Pulled from match-v5 for{" "}
+                      <strong>{summonerLabel}</strong>
                     </p>
                   )}
                 </div>
