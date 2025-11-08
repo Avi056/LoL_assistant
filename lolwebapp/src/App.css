@@ -35,9 +35,7 @@ body {
       rgba(56, 189, 248, 0.18),
       rgba(236, 72, 153, 0.05)
     ),
-    linear-gradient(135deg, rgba(3, 7, 18, 0.92), rgba(3, 7, 18, 0.65)),
-    url("./assets/1184580-popular-league-of-legends-ashe-wallpaper-1920x1080-mac.jpg")
-      center / cover no-repeat fixed;
+    linear-gradient(135deg, rgba(3, 7, 18, 0.98), rgba(15, 23, 42, 0.9));
   color: var(--text-primary);
   display: flex;
   align-items: stretch;
@@ -59,27 +57,8 @@ body::before {
       rgba(148, 163, 184, 0.12) 0deg 15deg,
       transparent 15deg 45deg
     );
-  opacity: 0.26;
+  opacity: 0.22;
   mix-blend-mode: screen;
-  pointer-events: none;
-  z-index: -2;
-}
-
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background:
-    linear-gradient(160deg, rgba(7, 11, 26, 0.6), transparent 45%),
-    repeating-linear-gradient(
-      135deg,
-      rgba(148, 163, 184, 0.12),
-      rgba(148, 163, 184, 0.12) 1px,
-      transparent 1px,
-      transparent 26px
-    );
-  mix-blend-mode: soft-light;
-  opacity: 0.55;
   pointer-events: none;
   z-index: -1;
 }
