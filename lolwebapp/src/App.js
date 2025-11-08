@@ -12,7 +12,7 @@ const APP_SHARE_URL = "https://main.d4ccg2oosnodu.amplifyapp.com";
 const buildShareSummary = (recap, winRate, kdaRatio) => {
   if (!recap) {
     return [
-      "🎮 LOL Forge Recap",
+      "🎮 LoL Assistant Recap",
       "No recap data yet. Fetch matches to generate a shareable summary.",
       `Check yours: ${APP_SHARE_URL}`,
     ].join("\n");
@@ -31,7 +31,7 @@ const buildShareSummary = (recap, winRate, kdaRatio) => {
     : "Stacking victories across the Rift";
 
   return [
-    `🎮 ${recap.summoner}'s LOL Forge Recap`,
+    `🎮 ${recap.summoner}'s LoL Assistant Recap`,
     `📊 ${wins}W / ${losses}L (${winRate.toFixed(1)}% WR)`,
     `⚔️ ${kdaRatio} KDA`,
     `✨ Top moment: ${signaturePlay}`,
@@ -577,7 +577,7 @@ function App() {
               <div className="story">
                 <div className="story__frame" style={storyBackdropStyle}>
                   <div className="story__header">
-                    <span className="story__badge">LOL Forge</span>
+                    <span className="story__badge">LoL Assistant</span>
                     <span className="story__season">
                       Last {recapData.lastGamesCount} games · {recapData.regionLabel}
                     </span>
