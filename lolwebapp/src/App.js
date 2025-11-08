@@ -1,6 +1,66 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
-import introImage from "./assets/1568742297124374.jpeg";
+
+const INTRO_BACKGROUND_ASSET = "dark blue league of legends background.jpg";
+const LEAGUE_LOGO_ASSET = "League-of-Legends-Logo.png";
+
+const normalizeFileName = (fileName) => fileName.replace(/^\.\/|^\/+/, "");
+
+const encodePath = (fileName) =>
+  normalizeFileName(fileName)
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+
+const createAssetCandidates = (fileName) => {
+  if (!fileName) return [];
+  if (/^https?:\/\//i.test(fileName)) return [fileName];
+
+  const base = process.env.PUBLIC_URL ?? "";
+  const normalizedBase = base.endsWith("/") ? base.slice(0, -1) : base;
+  const normalizedFile = normalizeFileName(fileName);
+  const encodedFile = encodePath(fileName);
+
+  const candidates = [
+    `${normalizedBase}/${encodedFile}`,
+    `${normalizedBase}/${normalizedFile}`,
+    `${normalizedBase}/assets/${encodedFile}`,
+    `${normalizedBase}/assets/${normalizedFile}`,
+    encodedFile,
+    normalizedFile,
+    fileName,
+  ];
+
+  return Array.from(
+    new Set(candidates.filter((candidate) => candidate && candidate !== ""))
+  );
+};
+
+const useAssetSource = (fileName) => {
+  const candidates = useMemo(() => createAssetCandidates(fileName), [fileName]);
+  const [candidateIndex, setCandidateIndex] = useState(0);
+
+  useEffect(() => {
+    setCandidateIndex(0);
+  }, [candidates]);
+
+  const handleError = useCallback(() => {
+    setCandidateIndex((index) => {
+      if (index + 1 < candidates.length) {
+        return index + 1;
+      }
+      return index;
+    });
+  }, [candidates.length]);
+
+  const currentSource = candidates[candidateIndex] ?? "";
+  const hasFallback = candidateIndex + 1 < candidates.length;
+
+  return {
+    src: currentSource,
+    onError: hasFallback ? handleError : undefined,
+  };
+};
 
 const REGION_OPTIONS = [
   { value: "ASIA", label: "Asia", description: "KR, JP, OCE, PH, SG" },
@@ -217,6 +277,7 @@ function App() {
     })
   );
   const [showIntro, setShowIntro] = useState(true);
+  const [introStage, setIntroStage] = useState("background");
   const [animateApp, setAnimateApp] = useState(false);
   const [shareFeedback, setShareFeedback] = useState("");
   const [recapNarrative, setRecapNarrative] = useState("");
@@ -227,13 +288,38 @@ function App() {
   const [error, setError] = useState(null);
   const [copyFeedback, setCopyFeedback] = useState("");
   const copyTimeoutRef = useRef(null);
+  const introLogoTimeoutRef = useRef(null);
+  const introExitTimeoutRef = useRef(null);
+  const introHideTimeoutRef = useRef(null);
+  const { src: introBackgroundSrc, onError: handleIntroBackgroundError } =
+    useAssetSource(INTRO_BACKGROUND_ASSET);
+  const { src: leagueLogoSrc, onError: handleLeagueLogoError } =
+    useAssetSource(LEAGUE_LOGO_ASSET);
 
   useEffect(() => {
-    const introTimer = setTimeout(() => {
-      setShowIntro(false);
-      setAnimateApp(true);
-    }, 3000);
-    return () => clearTimeout(introTimer);
+    introLogoTimeoutRef.current = setTimeout(() => {
+      setIntroStage("logo");
+    }, 1500);
+
+    introExitTimeoutRef.current = setTimeout(() => {
+      setIntroStage("exit");
+      introHideTimeoutRef.current = setTimeout(() => {
+        setShowIntro(false);
+        setAnimateApp(true);
+      }, 900);
+    }, 3600);
+
+    return () => {
+      if (introLogoTimeoutRef.current) {
+        clearTimeout(introLogoTimeoutRef.current);
+      }
+      if (introExitTimeoutRef.current) {
+        clearTimeout(introExitTimeoutRef.current);
+      }
+      if (introHideTimeoutRef.current) {
+        clearTimeout(introHideTimeoutRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -452,11 +538,19 @@ function App() {
   return (
     <div className="app-shell">
       {showIntro && (
-        <div className="intro-screen">
+        <div className={`intro-screen intro-screen--${introStage}`}>
           <img
-            className="intro-screen__image"
-            src={introImage}
-            alt="Loading splash art"
+            className="intro-screen__background"
+            src={introBackgroundSrc}
+            onError={handleIntroBackgroundError}
+            alt="League of Legends backdrop"
+          />
+          <div className="intro-screen__glow" />
+          <img
+            className="intro-screen__logo"
+            src={leagueLogoSrc}
+            onError={handleLeagueLogoError}
+            alt="League of Legends logo"
           />
         </div>
       )}
