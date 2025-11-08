@@ -10,22 +10,130 @@ const REGION_OPTIONS = [
 
 const APP_SHARE_URL = "https://main.d4ccg2oosnodu.amplifyapp.com";
 
-const buildShareSummary = (recap, winRate, kdaRatio) => {
-  if (!recap) {
-    return [
-      "🎮 LOL Forge Recap",
-      "No recap data yet. Fetch matches to generate a shareable summary.",
-      `Check yours: ${APP_SHARE_URL}`,
-    ].join("\n");
-  }
+const SAMPLE_RECAP = {
+  winDistribution: [
+    { label: "Wins", value: 21 },
+    { label: "Losses", value: 7 },
+    { label: "Remakes", value: 1 },
+  ],
+  kda: {
+    kills: 10.2,
+    deaths: 3.2,
+    assists: 12.9,
+    streak: 8,
+    csPerMin: 7.6,
+    goldPerMin: 438,
+  },
+  matchHistory: [
+    {
+      id: "NA1-5234509821",
+      champion: "Ashe",
+      role: "Bot",
+      result: "Win",
+      kda: "13 / 1 / 16",
+      csPerMin: 8.2,
+      damage: "33.4k dmg",
+      duration: "31:08",
+      highlightTag: "Quadra kill",
+    },
+    {
+      id: "NA1-5234402719",
+      champion: "Kai'Sa",
+      role: "Bot",
+      result: "Win",
+      kda: "9 / 2 / 10",
+      csPerMin: 7.9,
+      damage: "28.4k dmg",
+      duration: "29:42",
+      highlightTag: "Clutch steal",
+    },
+    {
+      id: "NA1-5234301184",
+      champion: "Caitlyn",
+      role: "Bot",
+      result: "Loss",
+      kda: "6 / 5 / 7",
+      csPerMin: 7.1,
+      damage: "24.6k dmg",
+      duration: "34:05",
+      highlightTag: "Siege expert",
+    },
+    {
+      id: "NA1-5234205617",
+      champion: "Aphelios",
+      role: "Bot",
+      result: "Win",
+      kda: "11 / 2 / 12",
+      csPerMin: 7.4,
+      damage: "30.1k dmg",
+      duration: "28:56",
+      highlightTag: "Baron flip",
+    },
+    {
+      id: "NA1-5234100032",
+      champion: "Jhin",
+      role: "Bot",
+      result: "Win",
+      kda: "10 / 3 / 11",
+      csPerMin: 6.8,
+      damage: "25.1k dmg",
+      duration: "31:11",
+      highlightTag: "Ace closer",
+    },
+  ],
+  playstyleTags: [
+    "Aggressive Marksman",
+    "Objective Hunter",
+    "Vision Controller",
+    "Teamfight Anchor",
+  ],
+  highlightMoments: [
+    {
+      title: "Arrow that flipped the Baron fight",
+      description:
+        "28:45 — Crystal Arrow snipes the enemy jungler, turning a 4v5 Baron into a clean ace.",
+    },
+    {
+      title: "Perfect vision lockdown",
+      description:
+        "Averaged 5.4 control wards per game, denying 73% of enemy ward placements around objectives.",
+    },
+    {
+      title: "Impeccable kiting finish",
+      description:
+        "Final Elder stand showcased flawless kiting with two resets and a secure objective.",
+    },
+  ],
+  lastGamesCount: 10,
+  trendFocus: "Plays for late-game teamfights",
+};
 
-  const winDistribution = recap.winDistribution || [];
-  const wins = winDistribution.find((segment) => segment.label === "Wins")?.value ?? 0;
+const createRecapData = ({ summoner, regionLabel }) => ({
+  summoner,
+  regionLabel,
+  winDistribution: SAMPLE_RECAP.winDistribution.map((segment) => ({
+    ...segment,
+  })),
+  kda: { ...SAMPLE_RECAP.kda },
+  matchHistory: SAMPLE_RECAP.matchHistory.map((match) => ({ ...match })),
+  playstyleTags: [...SAMPLE_RECAP.playstyleTags],
+  highlightMoments: SAMPLE_RECAP.highlightMoments.map((moment) => ({
+    ...moment,
+  })),
+  lastGamesCount: SAMPLE_RECAP.lastGamesCount,
+  trendFocus: SAMPLE_RECAP.trendFocus,
+});
+
+const buildShareSummary = (recap, winRate, kdaRatio) => {
+  const wins =
+    recap.winDistribution.find((segment) => segment.label === "Wins")?.value ??
+    0;
   const losses =
-    winDistribution.find((segment) => segment.label === "Losses")?.value ?? 0;
-  const topMatch = recap.matchHistory?.[0];
+    recap.winDistribution.find((segment) => segment.label === "Losses")?.value ??
+    0;
+  const topMatch = recap.matchHistory[0];
   const signaturePlay =
-    recap.highlightMoments?.[0]?.title || "Leaving unforgettable plays on the Rift";
+    recap.highlightMoments[0]?.title || "Leaving unforgettable plays on the Rift";
 
   const matchLine = topMatch
     ? `${topMatch.result} as ${topMatch.champion} (${topMatch.kda})`
@@ -102,7 +210,12 @@ function App() {
   const [tagLine, setTagLine] = useState("");
   const [region, setRegion] = useState(REGION_OPTIONS[0].value);
   const [view, setView] = useState("form");
-  const [recapData, setRecapData] = useState(null);
+  const [recapData, setRecapData] = useState(() =>
+    createRecapData({
+      summoner: "Summoner#TAG",
+      regionLabel: REGION_OPTIONS[0].label,
+    })
+  );
   const [showIntro, setShowIntro] = useState(true);
   const [animateApp, setAnimateApp] = useState(false);
   const [shareFeedback, setShareFeedback] = useState("");
@@ -146,37 +259,28 @@ function App() {
     [region]
   );
 
-  const winDistribution = recapData?.winDistribution || [];
-  const totalGames = winDistribution.reduce((acc, segment) => acc + segment.value, 0);
-  const winsSegment = winDistribution.find((segment) => segment.label === "Wins");
+  const totalGames = recapData.winDistribution.reduce(
+    (acc, segment) => acc + segment.value,
+    0
+  );
+  const winsSegment = recapData.winDistribution.find(
+    (segment) => segment.label === "Wins"
+  );
   const winRate = totalGames
     ? Math.round(((winsSegment?.value ?? 0) / totalGames) * 100)
     : 0;
-
-  const kda = recapData?.kda || {
-    kills: 0,
-    deaths: 0,
-    assists: 0,
-    streak: 0,
-    csPerMin: 0,
-    goldPerMin: 0,
-  };
-  const kdaRatio =
-    (kda.kills || kda.assists || kda.deaths
-      ? (
-          (Number(kda.kills) + Number(kda.assists)) /
-          Math.max(1, Number(kda.deaths))
-        ).toFixed(2)
-      : "0.00");
-
+  const kdaRatio = (
+    (recapData.kda.kills + recapData.kda.assists) /
+    Math.max(1, recapData.kda.deaths)
+  ).toFixed(2);
   const shareSummary = useMemo(
     () => buildShareSummary(recapData, winRate, Number(kdaRatio)),
     [recapData, winRate, kdaRatio]
   );
 
-  const matchHistoryEntries = recapData?.matchHistory || [];
-  const highlightEntries = recapData?.highlightMoments || [];
-  const playstyleTags = recapData?.playstyleTags || [];
+  const matchHistoryEntries = recapData.matchHistory || [];
+  const highlightEntries = recapData.highlightMoments || [];
+  const playstyleTags = recapData.playstyleTags || [];
   const primaryHighlight = highlightEntries[0];
 
   const handleSubmit = async (event) => {
@@ -229,30 +333,31 @@ function App() {
       const resolvedSummoner = payload.summoner ?? `${trimmedName}#${trimmedTag}`;
       setSummonerLabel(resolvedSummoner);
 
-      if (!payload.recap) {
-        throw new Error("Recap data unavailable for this Riot ID. Try again shortly.");
+      if (payload.recap) {
+        setRecapData({
+          ...payload.recap,
+          summoner: payload.recap.summoner || resolvedSummoner,
+          regionLabel: payload.recap.regionLabel || regionLabel,
+          winDistribution:
+            payload.recap.winDistribution || SAMPLE_RECAP.winDistribution,
+          kda: {
+            ...SAMPLE_RECAP.kda,
+            ...(payload.recap.kda || {}),
+          },
+          matchHistory: payload.recap.matchHistory || [],
+          playstyleTags: payload.recap.playstyleTags || [],
+          highlightMoments: payload.recap.highlightMoments || [],
+          lastGamesCount: payload.recap.lastGamesCount ?? 0,
+          trendFocus: payload.recap.trendFocus || SAMPLE_RECAP.trendFocus,
+        });
+      } else {
+        setRecapData(
+          createRecapData({
+            summoner: resolvedSummoner,
+            regionLabel,
+          })
+        );
       }
-
-      const recapPayload = payload.recap;
-      setRecapData({
-        ...recapPayload,
-        summoner: recapPayload.summoner || resolvedSummoner,
-        regionLabel: recapPayload.regionLabel || regionLabel,
-        winDistribution: recapPayload.winDistribution || [],
-        kda: {
-          kills: recapPayload.kda?.kills ?? 0,
-          deaths: recapPayload.kda?.deaths ?? 0,
-          assists: recapPayload.kda?.assists ?? 0,
-          streak: recapPayload.kda?.streak ?? 0,
-          csPerMin: recapPayload.kda?.csPerMin ?? 0,
-          goldPerMin: recapPayload.kda?.goldPerMin ?? 0,
-        },
-        matchHistory: recapPayload.matchHistory || [],
-        playstyleTags: recapPayload.playstyleTags || [],
-        highlightMoments: recapPayload.highlightMoments || [],
-        lastGamesCount: recapPayload.lastGamesCount ?? payload.matches.length,
-        trendFocus: recapPayload.trendFocus || "Live data in progress",
-      });
       setRecapNarrative("");
       setView("recap");
       setAnimateApp(true);
@@ -426,25 +531,6 @@ function App() {
               </form>
               {error && <div className="alert alert--error">{error}</div>}
             </main>
-          ) : !recapData ? (
-            <main className="card card--compact">
-              <div className="card__header">
-                <h1 className="title">Recap unavailable</h1>
-                <p className="subtitle">
-                  We couldn&apos;t build a recap from the Riot APIs just yet. Please try
-                  fetching matches again in a moment.
-                </p>
-              </div>
-              <div className="form-actions">
-                <button
-                  type="button"
-                  className="primary-button"
-                  onClick={handleBackToLookup}
-                >
-                  Back to lookup
-                </button>
-              </div>
-            </main>
           ) : (
             <section className="recap">
               <article className="ai-card ai-card--top">
@@ -516,19 +602,23 @@ function App() {
                     </div>
                     <div className="story__tile">
                       <span className="story__tile-label">Streak</span>
-                      <span className="story__tile-value">{kda.streak} W</span>
+                      <span className="story__tile-value">
+                        {recapData.kda.streak} W
+                      </span>
                     </div>
                     <div className="story__tile">
                       <span className="story__tile-label">CS / min</span>
                       <span className="story__tile-value">
-                        {typeof kda.csPerMin === "number"
-                          ? kda.csPerMin.toFixed(2)
-                          : kda.csPerMin}
+                        {recapData.kda.csPerMin?.toFixed
+                          ? recapData.kda.csPerMin.toFixed(2)
+                          : recapData.kda.csPerMin}
                       </span>
                     </div>
                     <div className="story__tile">
                       <span className="story__tile-label">Gold / min</span>
-                      <span className="story__tile-value">{kda.goldPerMin}</span>
+                      <span className="story__tile-value">
+                        {recapData.kda.goldPerMin}
+                      </span>
                     </div>
                   </div>
                   <div className="story__highlight">
@@ -596,26 +686,26 @@ function App() {
                   <div className="kda-breakdown">
                     <div>
                       <span>Avg Kills</span>
-                      <strong>{kda.kills}</strong>
+                      <strong>{recapData.kda.kills}</strong>
                     </div>
                     <div>
                       <span>Avg Deaths</span>
-                      <strong>{kda.deaths}</strong>
+                      <strong>{recapData.kda.deaths}</strong>
                     </div>
                     <div>
                       <span>Avg Assists</span>
-                      <strong>{kda.assists}</strong>
+                      <strong>{recapData.kda.assists}</strong>
                     </div>
                   </div>
                   <div className="kda-tags">
                     <span className="accent-chip">
-                      Longest win streak: {kda.streak}
+                      Longest win streak: {recapData.kda.streak}
                     </span>
                     <span className="accent-chip">
-                      CS / min: {kda.csPerMin}
+                      CS / min: {recapData.kda.csPerMin}
                     </span>
                     <span className="accent-chip">
-                      Gold / min: {kda.goldPerMin}
+                      Gold / min: {recapData.kda.goldPerMin}
                     </span>
                   </div>
                 </article>
