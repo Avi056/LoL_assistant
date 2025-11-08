@@ -741,6 +741,14 @@ body {
 
 .identity-card__header {
   display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.identity-card__profile {
+  display: flex;
   gap: 16px;
   align-items: center;
 }
@@ -796,37 +804,78 @@ body {
   gap: 16px;
 }
 
-.rank-chip {
-  padding: 12px 18px;
-  border-radius: 18px;
-  background: rgba(124, 58, 237, 0.16);
-  border: 1px solid rgba(124, 58, 237, 0.35);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 220px;
-}
-
-.rank-chip span {
-  font-size: 0.8rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(243, 232, 255, 0.8);
-}
-
-.rank-chip p {
-  margin: 0;
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-
-.rank-chip small {
-  color: rgba(226, 232, 240, 0.8);
-}
-
 .identity-card__activity {
   font-size: 0.9rem;
   color: var(--text-muted);
+}
+
+.identity-card__share {
+  position: relative;
+}
+
+.identity-card__share-button {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.6);
+  color: #f8fafc;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s ease, border 0.2s ease;
+}
+
+.identity-card__share-button:hover {
+  background: rgba(124, 58, 237, 0.25);
+  border-color: rgba(124, 58, 237, 0.7);
+}
+
+.identity-card__share-menu {
+  position: absolute;
+  right: 0;
+  margin-top: 6px;
+  min-width: 190px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(4, 7, 20, 0.92);
+  border: 1px solid rgba(124, 58, 237, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 20px 40px -25px rgba(15, 23, 42, 0.9);
+  z-index: 3;
+}
+
+.identity-card__share-menu p {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.7);
+}
+
+.identity-card__share-menu button {
+  border: none;
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: rgba(124, 58, 237, 0.15);
+  color: #f8fafc;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.identity-card__share-menu button:hover {
+  background: rgba(124, 58, 237, 0.35);
+}
+
+.identity-card__share-status {
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.9);
+  background: rgba(15, 23, 42, 0.6);
+  padding: 6px 10px;
+  border-radius: 999px;
 }
 
 .insight-list {
