@@ -1673,10 +1673,9 @@ body {
   line-height: 1.6;
 }
 
-.ai-card__textarea {
+.ai-card__response {
   width: 100%;
   min-height: 200px;
-  resize: vertical;
   padding: 18px;
   border-radius: 20px;
   border: 1px solid rgba(148, 163, 184, 0.35);
@@ -1685,13 +1684,25 @@ body {
   font-family: "Poppins", sans-serif;
   font-size: 0.98rem;
   line-height: 1.6;
-  outline: none;
   transition: border 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.ai-card__textarea:focus {
-  border-color: rgba(236, 72, 153, 0.6);
-  box-shadow: 0 0 0 4px rgba(236, 72, 153, 0.18);
+.ai-card__response p {
+  margin: 0;
+}
+
+.ai-card__response--empty {
+  justify-content: center;
+  text-align: center;
+  color: rgba(226, 232, 240, 0.7);
+  font-style: italic;
+}
+
+.ai-card__placeholder {
+  margin: 0;
 }
 
 .ai-card__actions {
