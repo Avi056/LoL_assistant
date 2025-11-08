@@ -544,14 +544,38 @@ def _get_bedrock_client():
 
 
 def _render_bedrock_content(response_json: Dict[str, Any]) -> str:
-    content = response_json.get("content") or []
+    # Handle multiple possible response formats from Bedrock Claude models
+    content = (
+        response_json.get("content")
+        or response_json.get("output")
+        or response_json.get("completion")
+        or []
+    )
+
+    # If it's already a string
+    if isinstance(content, str):
+        return content.strip()
+
+    # If it's a list of dicts
     if isinstance(content, list):
         parts = []
         for item in content:
-            if isinstance(item, dict) and item.get("type") == "text":
-                parts.append(item.get("text") or "")
+            if isinstance(item, dict):
+                # Handle both new and old formats
+                text = (
+                    item.get("text")
+                    or item.get("content")
+                    or item.get("message")
+                    or ""
+                )
+                parts.append(str(text))
         if parts:
             return "".join(parts).strip()
+
+    # Handle Anthropic "message" schema (rare but possible)
+    if "message" in response_json:
+        return str(response_json["message"]).strip()
+
     return ""
 
 
