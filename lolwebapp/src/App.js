@@ -107,30 +107,6 @@ const buildShareSummary = (recap, winRate, kdaRatio) => {
   ].join("\n");
 };
 
-const buildAiNarrative = (recap, winRate, kdaRatio) => {
-  const favoriteChamp = recap.matchHistory[0]?.champion ?? "your mains";
-  const streak = recap.kda.streak;
-  const standoutMoments = recap.highlightMoments
-    .map((moment) => `• ${moment.title} — ${moment.description}`)
-    .join("\n");
-  const tags = recap.playstyleTags.join(" · ") || "Data incoming soon";
-
-  return `✨ ${recap.summoner}'s Riot Rift Recap ✨
-
-Across ${recap.lastGamesCount} games in ${recap.regionLabel}, ${
-    recap.summoner
-  } logged a ${winRate}% win rate while averaging a ${kdaRatio}:1 KDA. The longest win streak hit ${
-    streak
-  } games, led by ${favoriteChamp} and confident objective control.
-
-Playstyle remix: ${tags}.
-
-Standout moments:
-${standoutMoments || "• Pull fresh data to unlock highlight descriptions."}
-
-Live telemetry from Riot endpoints keeps the receipts. Queue up and write the next chapter. 🗡️`;
-};
-
 const copyTextToClipboard = async (text) => {
   try {
     if (
@@ -214,9 +190,11 @@ function App() {
   const [statusInsight, setStatusInsight] = useState(null);
   const [advancedInsight, setAdvancedInsight] = useState(null);
   const [hasLiveInsights, setHasLiveInsights] = useState(false);
+  const [aiError, setAiError] = useState("");
   const copyTimeoutRef = useRef(null);
   const introDelayTimeoutRef = useRef(null);
   const introHideTimeoutRef = useRef(null);
+  const aiStatsRef = useRef(null);
 
   useEffect(() => {
     introDelayTimeoutRef.current = setTimeout(() => {
@@ -339,6 +317,9 @@ function App() {
     setMatches([]);
     setSummonerLabel("");
     setCopyFeedback("");
+    setRecapNarrative("");
+    setAiError("");
+    aiStatsRef.current = null;
 
     try {
       const response = await fetch(API_URL, {
@@ -387,7 +368,17 @@ function App() {
       setStatusInsight(payload.platformStatus ?? null);
       setAdvancedInsight(payload.advancedMetrics ?? null);
       setHasLiveInsights(true);
-      setRecapNarrative("");
+      aiStatsRef.current =
+        payload.aiStatsContext || {
+          recap: normalizedRecap,
+          profile: payload.profile ?? null,
+          leagueSummary: payload.leagueSummary ?? [],
+          platformStatus: payload.platformStatus ?? null,
+          advancedMetrics: payload.advancedMetrics ?? null,
+          matches: normalizedRecap.matchHistory ?? [],
+        };
+      setRecapNarrative(payload.aiFeedback?.message || "");
+      setAiError(payload.aiFeedback?.error || "");
       setView("recap");
       setAnimateApp(true);
     } catch (requestError) {
@@ -404,6 +395,9 @@ function App() {
   const handleBackToLookup = () => {
     setView("form");
     setAnimateApp(true);
+    setRecapNarrative("");
+    setAiError("");
+    aiStatsRef.current = null;
   };
 
   const handleShare = async (platform) => {
@@ -461,14 +455,51 @@ function App() {
     }
   };
 
-  const handleGenerateRecap = () => {
+  const handleGenerateRecap = async () => {
     if (isGeneratingRecap) return;
-    setIsGeneratingRecap(true);
+    if (!aiStatsRef.current) {
+      setAiError("No stats available for AI feedback yet. Fetch matches first.");
+      return;
+    }
 
-    setTimeout(() => {
-      setRecapNarrative(buildAiNarrative(recapData, winRate, Number(kdaRatio)));
+    setIsGeneratingRecap(true);
+    setAiError("");
+
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "ai-feedback",
+          stats: aiStatsRef.current,
+        }),
+      });
+
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch {
+        payload = null;
+      }
+
+      if (!response.ok) {
+        const message =
+          payload?.error ||
+          `Request failed with status ${response.status}. Please try again.`;
+        throw new Error(message);
+      }
+
+      const aiFeedback = payload?.aiFeedback || {};
+      setRecapNarrative(aiFeedback.message || "");
+      setAiError(aiFeedback.error || "");
+    } catch (requestError) {
+      console.error(requestError);
+      setAiError(
+        requestError?.message || "Something went wrong while generating feedback."
+      );
+    } finally {
       setIsGeneratingRecap(false);
-    }, 1400);
+    }
   };
 
   const handleCopy = async (matchId) => {
@@ -566,19 +597,19 @@ function App() {
             <section className="recap">
               <article className="ai-card ai-card--top">
                 <header className="ai-card__header">
-                  <h2>AI headline</h2>
+                  <h2>AI&apos;s friendly suggestions to improve your gameplay :)</h2>
                   <p>
-                    Generate a Spotify Wrapped-style voiceover rooted in the
-                    same Riot match, summoner, league, and status data powering
-                    the dashboard below.
+                    Tap the button to let Claude 3.5 Haiku on Amazon Bedrock
+                    roast your stats and drop constructive advice based on the
+                    live Riot data below.
                   </p>
                 </header>
                 <textarea
                   className="ai-card__textarea"
                   rows={8}
                   value={recapNarrative}
-                  placeholder="Tap Generate Recap to create your personalized narrative."
-                  onChange={(event) => setRecapNarrative(event.target.value)}
+                  placeholder="Tap Generate Feedback to summon a spicy-yet-helpful roast from Claude."
+                  readOnly
                 />
                 <div className="ai-card__actions">
                   <button
@@ -587,11 +618,13 @@ function App() {
                     onClick={handleGenerateRecap}
                     disabled={isGeneratingRecap}
                   >
-                    {isGeneratingRecap ? "Summoning recap…" : "Generate Recap"}
+                    {isGeneratingRecap ? "Summoning feedback…" : "Generate Feedback"}
                   </button>
                   <span className="ai-card__hint">
-                    Powered exclusively by fresh Riot API pulls.
+                    Powered by Amazon Bedrock (Claude 3.5 Haiku) and fresh Riot
+                    API data.
                   </span>
+                  {aiError && <span className="ai-card__error">{aiError}</span>}
                 </div>
               </article>
 

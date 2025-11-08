@@ -1616,6 +1616,11 @@ body {
   color: rgba(226, 232, 240, 0.75);
 }
 
+.ai-card__error {
+  font-size: 0.9rem;
+  color: rgba(248, 113, 113, 0.95);
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
