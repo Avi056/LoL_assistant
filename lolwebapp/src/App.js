@@ -19,186 +19,62 @@ const REGION_OPTIONS = [
   { value: "EUROPE", label: "Europe", description: "EUW, EUNE, TR, RU" },
 ];
 
-const APP_SHARE_URL = "https://main.d4ccg2oosnodu.amplifyapp.com";
+const APP_SHARE_URL = "https://main.dmmttg0yma1yv.amplifyapp.com/";
 const DATA_DRAGON_VERSION = "14.24.1";
+const API_URL =
+  "https://fiauf5t7o7.execute-api.us-east-1.amazonaws.com/InitialStage/matches";
 
-const SAMPLE_RECAP = {
+const createEmptyRecap = ({ summoner, regionLabel }) => ({
+  summoner: summoner || "Summoner#TAG",
+  regionLabel: regionLabel || REGION_OPTIONS[0].label,
   winDistribution: [
-    { label: "Wins", value: 21 },
-    { label: "Losses", value: 7 },
-    { label: "Remakes", value: 1 },
+    { label: "Wins", value: 0 },
+    { label: "Losses", value: 0 },
+    { label: "Remakes", value: 0 },
   ],
   kda: {
-    kills: 10.2,
-    deaths: 3.2,
-    assists: 12.9,
-    streak: 8,
-    csPerMin: 7.6,
-    goldPerMin: 438,
+    kills: 0,
+    deaths: 0,
+    assists: 0,
+    streak: 0,
+    csPerMin: 0,
+    goldPerMin: 0,
   },
-  matchHistory: [
-    {
-      id: "NA1-5234509821",
-      champion: "Ashe",
-      role: "Bot",
-      result: "Win",
-      kda: "13 / 1 / 16",
-      csPerMin: 8.2,
-      damage: "33.4k dmg",
-      duration: "31:08",
-      highlightTag: "Quadra kill",
-    },
-    {
-      id: "NA1-5234402719",
-      champion: "Kai'Sa",
-      role: "Bot",
-      result: "Win",
-      kda: "9 / 2 / 10",
-      csPerMin: 7.9,
-      damage: "28.4k dmg",
-      duration: "29:42",
-      highlightTag: "Clutch steal",
-    },
-    {
-      id: "NA1-5234301184",
-      champion: "Caitlyn",
-      role: "Bot",
-      result: "Loss",
-      kda: "6 / 5 / 7",
-      csPerMin: 7.1,
-      damage: "24.6k dmg",
-      duration: "34:05",
-      highlightTag: "Siege expert",
-    },
-    {
-      id: "NA1-5234205617",
-      champion: "Aphelios",
-      role: "Bot",
-      result: "Win",
-      kda: "11 / 2 / 12",
-      csPerMin: 7.4,
-      damage: "30.1k dmg",
-      duration: "28:56",
-      highlightTag: "Baron flip",
-    },
-    {
-      id: "NA1-5234100032",
-      champion: "Jhin",
-      role: "Bot",
-      result: "Win",
-      kda: "10 / 3 / 11",
-      csPerMin: 6.8,
-      damage: "25.1k dmg",
-      duration: "31:11",
-      highlightTag: "Ace closer",
-    },
-  ],
-  playstyleTags: [
-    "Aggressive Marksman",
-    "Objective Hunter",
-    "Vision Controller",
-    "Teamfight Anchor",
-  ],
-  highlightMoments: [
-    {
-      title: "Arrow that flipped the Baron fight",
-      description:
-        "28:45 — Crystal Arrow snipes the enemy jungler, turning a 4v5 Baron into a clean ace.",
-    },
-    {
-      title: "Perfect vision lockdown",
-      description:
-        "Averaged 5.4 control wards per game, denying 73% of enemy ward placements around objectives.",
-    },
-    {
-      title: "Impeccable kiting finish",
-      description:
-        "Final Elder stand showcased flawless kiting with two resets and a secure objective.",
-    },
-  ],
-  lastGamesCount: 10,
-  trendFocus: "Plays for late-game teamfights",
-};
-
-const SAMPLE_PROFILE = {
-  riotId: "Summoner#TAG",
-  platform: "NA1",
-  level: 512,
-  iconId: 588,
-  lastActiveIso: "2024-11-15T18:22:00Z",
-};
-
-const SAMPLE_LEAGUE = [
-  {
-    queueType: "RANKED_SOLO_5x5",
-    tier: "MASTER",
-    rank: "I",
-    leaguePoints: 266,
-    wins: 110,
-    losses: 92,
-    winRate: 54.4,
-    hotStreak: true,
-  },
-  {
-    queueType: "RANKED_FLEX_SR",
-    tier: "GRANDMASTER",
-    rank: "I",
-    leaguePoints: 121,
-    wins: 72,
-    losses: 41,
-    winRate: 63.7,
-  },
-];
-
-const SAMPLE_STATUS = {
-  name: "Sample Region",
-  slug: "na1",
-  incidents: [],
-  maintenances: [],
-};
-
-const SAMPLE_ADVANCED = {
-  avgGameDurationLabel: "31:42",
-  avgGameDurationMinutes: 31.7,
-  damagePerMinute: 712.5,
-  killParticipation: 68.6,
-  visionScore: 34.1,
-  objectiveDamage: 15420,
-  objectiveFocusRate: 66.7,
-  visionControlRate: 53.1,
-  championPool: [
-    { champion: "Ashe", count: 6 },
-    { champion: "Jhin", count: 3 },
-    { champion: "Kai'Sa", count: 2 },
-  ],
-  roleDistribution: [
-    { role: "BOTTOM", count: 7 },
-    { role: "UTILITY", count: 3 },
-  ],
-  clutchGame: {
-    champion: "Ashe",
-    matchId: "NA1-5234509821",
-    kda: "13 / 1 / 16",
-    highlight: "Quadra Kill",
-    killParticipation: 82.5,
-  },
-};
-
-const createRecapData = ({ summoner, regionLabel }) => ({
-  summoner,
-  regionLabel,
-  winDistribution: SAMPLE_RECAP.winDistribution.map((segment) => ({
-    ...segment,
-  })),
-  kda: { ...SAMPLE_RECAP.kda },
-  matchHistory: SAMPLE_RECAP.matchHistory.map((match) => ({ ...match })),
-  playstyleTags: [...SAMPLE_RECAP.playstyleTags],
-  highlightMoments: SAMPLE_RECAP.highlightMoments.map((moment) => ({
-    ...moment,
-  })),
-  lastGamesCount: SAMPLE_RECAP.lastGamesCount,
-  trendFocus: SAMPLE_RECAP.trendFocus,
+  matchHistory: [],
+  playstyleTags: [],
+  highlightMoments: [],
+  lastGamesCount: 0,
+  trendFocus: "Lock in your Riot ID to surface personalized trends.",
 });
+
+const normalizeRecapPayload = (payload, fallbackSummoner, regionLabel) => {
+  if (!payload) {
+    return createEmptyRecap({ summoner: fallbackSummoner, regionLabel });
+  }
+  const base = createEmptyRecap({ summoner: fallbackSummoner, regionLabel });
+  return {
+    ...base,
+    ...payload,
+    summoner: payload.summoner || fallbackSummoner,
+    regionLabel: payload.regionLabel || regionLabel,
+    winDistribution:
+      payload.winDistribution?.length === 3
+        ? payload.winDistribution
+        : base.winDistribution,
+    kda: {
+      ...base.kda,
+      ...(payload.kda || {}),
+    },
+    matchHistory: payload.matchHistory || [],
+    playstyleTags: payload.playstyleTags || [],
+    highlightMoments: payload.highlightMoments || [],
+    lastGamesCount:
+      typeof payload.lastGamesCount === "number"
+        ? payload.lastGamesCount
+        : base.lastGamesCount,
+    trendFocus: payload.trendFocus || base.trendFocus,
+  };
+};
 
 const buildShareSummary = (recap, winRate, kdaRatio) => {
   const wins =
@@ -209,11 +85,13 @@ const buildShareSummary = (recap, winRate, kdaRatio) => {
       ?.value ?? 0;
   const topMatch = recap.matchHistory[0];
   const signaturePlay =
-    recap.highlightMoments[0]?.title || "Clutch plays across the Rift";
+    recap.highlightMoments[0]?.title ||
+    topMatch?.highlightTag ||
+    "Clutch plays across the Rift";
 
   const matchLine = topMatch
     ? `${topMatch.result} as ${topMatch.champion} (${topMatch.kda})`
-    : "Stacking victories across the Rift";
+    : "Queue up to log fresh wins.";
 
   return [
     `🎮 ${recap.summoner}'s Riot Rift Recap`,
@@ -224,33 +102,33 @@ const buildShareSummary = (recap, winRate, kdaRatio) => {
     "",
     `${matchLine}`,
     "",
-    "📡 Data pulled directly from Riot APIs.",
+    "📡 Every stat is sourced directly from Riot APIs.",
     `Check yours: ${APP_SHARE_URL}`,
   ].join("\n");
 };
 
 const buildAiNarrative = (recap, winRate, kdaRatio) => {
-  const favoriteChamp = recap.matchHistory[0]?.champion ?? "their mains";
+  const favoriteChamp = recap.matchHistory[0]?.champion ?? "your mains";
   const streak = recap.kda.streak;
   const standoutMoments = recap.highlightMoments
     .map((moment) => `• ${moment.title} — ${moment.description}`)
     .join("\n");
-  const tags = recap.playstyleTags.join(" · ");
+  const tags = recap.playstyleTags.join(" · ") || "Data incoming soon";
 
-  return `✨ ${recap.summoner}'s Rift Wrapped ✨
+  return `✨ ${recap.summoner}'s Riot Rift Recap ✨
 
 Across ${recap.lastGamesCount} games in ${recap.regionLabel}, ${
     recap.summoner
   } logged a ${winRate}% win rate while averaging a ${kdaRatio}:1 KDA. The longest win streak hit ${
     streak
-  } games, fueled by ${favoriteChamp} and razor-sharp late game instincts.
+  } games, led by ${favoriteChamp} and confident objective control.
 
 Playstyle remix: ${tags}.
 
 Standout moments:
-${standoutMoments}
+${standoutMoments || "• Pull fresh data to unlock highlight descriptions."}
 
-Live data straight from Riot endpoints keeps the receipts. Queue up and write the next chapter. 🗡️`;
+Live telemetry from Riot endpoints keeps the receipts. Queue up and write the next chapter. 🗡️`;
 };
 
 const copyTextToClipboard = async (text) => {
@@ -315,7 +193,7 @@ function App() {
   const [region, setRegion] = useState(REGION_OPTIONS[0].value);
   const [view, setView] = useState("form");
   const [recapData, setRecapData] = useState(() =>
-    createRecapData({
+    createEmptyRecap({
       summoner: "Summoner#TAG",
       regionLabel: REGION_OPTIONS[0].label,
     })
@@ -382,18 +260,18 @@ function App() {
     [region]
   );
 
-  const totalGames = recapData.winDistribution.reduce(
-    (acc, segment) => acc + segment.value,
-    0
+  const totalGames = useMemo(
+    () => recapData.winDistribution.reduce((acc, segment) => acc + segment.value, 0),
+    [recapData.winDistribution]
   );
-  const winsSegment = recapData.winDistribution.find(
-    (segment) => segment.label === "Wins"
-  );
-  const lossesSegment = recapData.winDistribution.find(
-    (segment) => segment.label === "Losses"
-  );
+  const winsSegment =
+    recapData.winDistribution.find((segment) => segment.label === "Wins") ??
+    { value: 0 };
+  const lossesSegment =
+    recapData.winDistribution.find((segment) => segment.label === "Losses") ??
+    { value: 0 };
   const winRate = totalGames
-    ? Math.round(((winsSegment?.value ?? 0) / totalGames) * 100)
+    ? Math.round(((winsSegment.value ?? 0) / totalGames) * 100)
     : 0;
   const kdaRatio = (
     (recapData.kda.kills + recapData.kda.assists) /
@@ -404,32 +282,25 @@ function App() {
     [recapData, winRate, kdaRatio]
   );
 
-  const resolvedProfile =
-    profileInsight || (!hasLiveInsights ? SAMPLE_PROFILE : null);
-  const resolvedLeague =
-    hasLiveInsights && leagueInsight.length === 0
-      ? []
-      : leagueInsight.length
-      ? leagueInsight
-      : SAMPLE_LEAGUE;
-  const resolvedStatus =
-    statusInsight || (!hasLiveInsights ? SAMPLE_STATUS : null);
-  const resolvedAdvanced =
-    advancedInsight || (!hasLiveInsights ? SAMPLE_ADVANCED : null);
+  const resolvedProfile = hasLiveInsights ? profileInsight : null;
+  const resolvedLeague = hasLiveInsights ? leagueInsight : [];
+  const resolvedStatus = hasLiveInsights ? statusInsight : null;
+  const resolvedAdvanced = hasLiveInsights ? advancedInsight : null;
 
   const profileIconUrl = useMemo(
     () => buildProfileIconUrl(resolvedProfile?.iconId),
     [resolvedProfile]
   );
 
-  const displayedLeague = resolvedLeague || [];
-  const soloQueueEntry = displayedLeague.find(
+  const soloQueueEntry = resolvedLeague.find(
     (entry) => entry.queueType === "RANKED_SOLO_5x5"
   );
-  const anchorRank = soloQueueEntry || displayedLeague[0];
+  const anchorRank = soloQueueEntry || resolvedLeague[0];
   const rankLabel = anchorRank
     ? `${anchorRank.tier} ${anchorRank.rank} · ${anchorRank.leaguePoints} LP`
-    : "Unranked";
+    : hasLiveInsights
+    ? "Unranked"
+    : "Awaiting live data";
   const rankQueueLabel = anchorRank
     ? formatQueueLabel(anchorRank.queueType)
     : "Ranked ladder";
@@ -437,14 +308,14 @@ function App() {
     ? `${anchorRank.wins}W / ${anchorRank.losses}L (${anchorRank.winRate}% WR)`
     : "Play a ranked game to surface ladder data.";
 
-  const statusIncident = resolvedStatus?.incidents?.[0];
-  const statusMaintenance = resolvedStatus?.maintenances?.[0];
+  const incidents = resolvedStatus?.incidents || [];
+  const maintenances = resolvedStatus?.maintenances || [];
   const statusMessage =
-    statusIncident?.message ||
-    statusIncident?.title ||
-    statusMaintenance?.message ||
-    statusMaintenance?.title ||
-    "No active incidents reported.";
+    incidents[0]?.message ||
+    incidents[0]?.title ||
+    maintenances[0]?.message ||
+    maintenances[0]?.title ||
+    "No active incidents reported by Riot for this shard.";
 
   const championPool = resolvedAdvanced?.championPool ?? [];
   const roleDistribution = resolvedAdvanced?.roleDistribution ?? [];
@@ -470,9 +341,6 @@ function App() {
     setCopyFeedback("");
 
     try {
-      const API_URL =
-        "https://fiauf5t7o7.execute-api.us-east-1.amazonaws.com/InitialStage/matches";
-
       const response = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -486,7 +354,9 @@ function App() {
       let payload = null;
       try {
         payload = await response.json();
-      } catch {}
+      } catch {
+        payload = null;
+      }
 
       if (!response.ok) {
         const message =
@@ -501,37 +371,17 @@ function App() {
         return;
       }
 
-      setMatches(payload.matches || []);
       const resolvedSummoner =
         payload.summoner ?? `${trimmedName}#${trimmedTag}`;
+      const normalizedRecap = normalizeRecapPayload(
+        payload.recap,
+        resolvedSummoner,
+        regionLabel
+      );
+
+      setMatches(payload.matches || []);
       setSummonerLabel(resolvedSummoner);
-
-      if (payload.recap) {
-        setRecapData({
-          ...payload.recap,
-          summoner: payload.recap.summoner || resolvedSummoner,
-          regionLabel: payload.recap.regionLabel || regionLabel,
-          winDistribution:
-            payload.recap.winDistribution || SAMPLE_RECAP.winDistribution,
-          kda: {
-            ...SAMPLE_RECAP.kda,
-            ...(payload.recap.kda || {}),
-          },
-          matchHistory: payload.recap.matchHistory || [],
-          playstyleTags: payload.recap.playstyleTags || [],
-          highlightMoments: payload.recap.highlightMoments || [],
-          lastGamesCount: payload.recap.lastGamesCount ?? 0,
-          trendFocus: payload.recap.trendFocus || SAMPLE_RECAP.trendFocus,
-        });
-      } else {
-        setRecapData(
-          createRecapData({
-            summoner: resolvedSummoner,
-            regionLabel,
-          })
-        );
-      }
-
+      setRecapData(normalizedRecap);
       setProfileInsight(payload.profile ?? null);
       setLeagueInsight(payload.leagueSummary ?? []);
       setStatusInsight(payload.platformStatus ?? null);
@@ -584,15 +434,11 @@ function App() {
       case "discord":
         {
           const copied = await copyTextToClipboard(shareSummary);
-          if (copied) {
-            setShareFeedback(
-              "Recap copied. Paste it into your next Discord chat."
-            );
-          } else {
-            setShareFeedback(
-              "Copy failed. Please copy manually before posting to Discord."
-            );
-          }
+          setShareFeedback(
+            copied
+              ? "Recap copied. Paste it into your next Discord chat."
+              : "Copy failed. Please copy manually before posting to Discord."
+          );
           window.open(
             "https://discord.com/channels/@me",
             "_blank",
@@ -653,10 +499,9 @@ function App() {
               <div className="card__header">
                 <h1 className="title">League of Legends Match Explorer</h1>
                 <p className="subtitle">
-                  Lock in your Riot ID and region to pull match history, account,
-                  league, and platform-status data directly from the Riot API
-                  stack. Every stat on the recap is sourced from those live
-                  endpoints.
+                  Lock in your Riot ID and region to pull match history,
+                  account, league, platform-status, and macro insights directly
+                  from the Riot API stack.
                 </p>
               </div>
 
@@ -724,8 +569,8 @@ function App() {
                   <h2>AI headline</h2>
                   <p>
                     Generate a Spotify Wrapped-style voiceover rooted in the
-                    same Riot match, summoner, league, and status endpoints used
-                    for the dashboard.
+                    same Riot match, summoner, league, and status data powering
+                    the dashboard below.
                   </p>
                 </header>
                 <textarea
@@ -745,8 +590,7 @@ function App() {
                     {isGeneratingRecap ? "Summoning recap…" : "Generate Recap"}
                   </button>
                   <span className="ai-card__hint">
-                    Pulls in the same stats that power the rest of the data
-                    screen.
+                    Powered exclusively by fresh Riot API pulls.
                   </span>
                 </div>
               </article>
@@ -766,7 +610,7 @@ function App() {
                       hasLiveInsights ? "data-chip--live" : "data-chip--sample"
                     }`}
                   >
-                    {hasLiveInsights ? "Live Riot data" : "Sample preview"}
+                    {hasLiveInsights ? "Live Riot data" : "Awaiting lookup"}
                   </span>
                   <button
                     type="button"
@@ -791,11 +635,13 @@ function App() {
                       )}
                     </div>
                     <div>
-                      <p className="recap__eyebrow">Live account snapshot</p>
-                      <h2>{recapData.summoner}</h2>
+                      <p className="recap__eyebrow">Account snapshot</p>
+                      <h2>{resolvedProfile?.summonerName || recapData.summoner}</h2>
                       <p className="identity-card__meta">
                         Level {resolvedProfile?.level ?? "—"} ·{" "}
-                        {resolvedProfile?.platform || recapData.regionLabel}
+                        {resolvedProfile?.platform ||
+                          recapData.regionLabel ||
+                          "—"}
                       </p>
                     </div>
                   </div>
@@ -833,7 +679,7 @@ function App() {
                   <header className="insight-card__header">
                     <h3>Momentum tracker</h3>
                     <span>
-                      {winsSegment?.value ?? 0}W · {lossesSegment?.value ?? 0}L ·{" "}
+                      {winsSegment.value ?? 0}W · {lossesSegment.value ?? 0}L ·{" "}
                       {recapData.winDistribution.find(
                         (segment) => segment.label === "Remakes"
                       )?.value ?? 0}
@@ -890,10 +736,10 @@ function App() {
                   <p className="status-card__message">{statusMessage}</p>
                   <div className="status-card__tags">
                     <span className="pill">
-                      Incidents {resolvedStatus?.incidents?.length ?? 0}
+                      Incidents {incidents.length}
                     </span>
                     <span className="pill">
-                      Maintenances {resolvedStatus?.maintenances?.length ?? 0}
+                      Maintenances {maintenances.length}
                     </span>
                   </div>
                 </article>
@@ -976,8 +822,8 @@ function App() {
                     </li>
                   </ul>
                   <p className="stat-card__note">
-                    Objective rate counts games with 15k+ objective damage, while
-                    vision rate tracks 40+ vision score games.
+                    Objective rate counts games with 15k+ objective damage,
+                    while vision rate tracks 40+ vision score games.
                   </p>
                 </article>
 
@@ -986,16 +832,22 @@ function App() {
                     <h2>Playstyle tags</h2>
                     <span className="stat-card__sub">{recapData.trendFocus}</span>
                   </header>
-                  <div className="pill-row">
-                    {playstyleTags.map((tag) => (
-                      <span key={tag} className="pill">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
+                  {playstyleTags.length > 0 ? (
+                    <div className="pill-row">
+                      {playstyleTags.map((tag) => (
+                        <span key={tag} className="pill">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="empty-state">
+                      Pull fresh games to classify your macro tendencies.
+                    </p>
+                  )}
                   <p className="stat-card__note">
-                    Tags refresh every pull to mirror how the Riot endpoints see
-                    your macro, tempo, and late-game presence.
+                    Tags are rebuilt every lookup from Riot&apos;s raw match
+                    telemetry.
                   </p>
                 </article>
               </div>
@@ -1097,7 +949,7 @@ function App() {
               <article className="champion-card insight-card">
                 <header className="insight-card__header">
                   <h3>Champion & role mix</h3>
-                  <span>Top pulls from the match endpoints</span>
+                  <span>Top pulls from match-v5</span>
                 </header>
                 <div className="champion-card__body">
                   <div>
@@ -1131,6 +983,82 @@ function App() {
                     )}
                   </div>
                 </div>
+              </article>
+
+              <article className="insight-card league-card">
+                <header className="insight-card__header">
+                  <h3>League ladders</h3>
+                  <span>Direct from league-v4</span>
+                </header>
+                {resolvedLeague.length > 0 ? (
+                  <ul className="mini-list league-list">
+                    {resolvedLeague.map((entry) => (
+                      <li key={`${entry.queueType}-${entry.tier}-${entry.rank}`}>
+                        <div>
+                          <strong>{formatQueueLabel(entry.queueType)}</strong>
+                          <p>
+                            {entry.tier} {entry.rank} · {entry.leaguePoints} LP
+                          </p>
+                        </div>
+                        <div className="league-record">
+                          <span>
+                            {entry.wins}W / {entry.losses}L
+                          </span>
+                          <small>{entry.winRate}% WR</small>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="empty-state">
+                    Play ranked games to populate league insights.
+                  </p>
+                )}
+              </article>
+
+              <article className="insight-card status-log-card">
+                <header className="insight-card__header">
+                  <h3>Incident log</h3>
+                  <span>Latest messages from status-v4</span>
+                </header>
+                {incidents.length === 0 && maintenances.length === 0 ? (
+                  <p className="empty-state">
+                    No incidents or maintenances reported.
+                  </p>
+                ) : (
+                  <div className="status-log">
+                    {incidents.length > 0 && (
+                      <div>
+                        <h4>Incidents</h4>
+                        <ul className="status-log__list">
+                          {incidents.map((incident) => (
+                            <li key={incident.id}>
+                              <strong>{incident.title || incident.id}</strong>
+                              <p>{incident.message || "No message provided."}</p>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {maintenances.length > 0 && (
+                      <div>
+                        <h4>Maintenances</h4>
+                        <ul className="status-log__list">
+                          {maintenances.map((maintenance) => (
+                            <li key={maintenance.id}>
+                              <strong>
+                                {maintenance.title || maintenance.id}
+                              </strong>
+                              <p>
+                                {maintenance.message || "No message provided."}
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
               </article>
 
               <aside className="share-card">
