@@ -948,29 +948,39 @@ body {
 
 .pie-chart {
   display: flex;
-  flex-direction: column;
-  gap: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px;
+}
+
+.pie-chart__visual-wrapper {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .pie-chart__visual {
-  width: 160px;
-  height: 160px;
-  border-radius: 50%;
   position: relative;
-  margin: 0 auto;
-  background:
-    radial-gradient(circle at center, rgba(4, 7, 20, 0.65) 58%, transparent 59%),
-    var(--pie-gradient, conic-gradient(#7c3aed, #22d3ee));
-  box-shadow: 0 18px 35px -20px rgba(124, 58, 237, 0.9);
+  width: 180px;
+  height: 180px;
 }
 
-.pie-chart__visual::after {
-  content: "";
-  position: absolute;
-  inset: 24px;
-  border-radius: 50%;
-  background: rgba(15, 23, 42, 0.92);
-  box-shadow: inset 0 0 20px rgba(2, 6, 23, 0.9);
+.pie-chart__visual svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 18px 35px rgba(124, 58, 237, 0.35));
+}
+
+.pie-chart__segment {
+  opacity: 0.65;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  cursor: pointer;
+}
+
+.pie-chart__segment--active {
+  opacity: 1;
+  transform: scale(1.01);
 }
 
 .pie-chart__center {
@@ -980,23 +990,28 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 1;
-  text-transform: uppercase;
-  font-size: 0.7rem;
-  letter-spacing: 0.2em;
-  color: var(--text-muted);
+  text-align: center;
+  gap: 4px;
+  pointer-events: none;
 }
 
 .pie-chart__center strong {
-  font-size: 1.6rem;
+  font-size: 1.8rem;
   color: #fff;
-  letter-spacing: normal;
+}
+
+.pie-chart__center span {
+  font-size: 0.8rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
 .pie-chart__legend {
   list-style: none;
   margin: 0;
   padding: 0;
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1006,10 +1021,18 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
-  border-radius: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
   background: rgba(15, 23, 42, 0.65);
-  border: 1px solid rgba(124, 58, 237, 0.25);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  cursor: pointer;
+  transition: border 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.pie-chart__legend-item--active {
+  border-color: var(--accent-strong);
+  background: rgba(124, 58, 237, 0.15);
+  transform: translateX(2px);
 }
 
 .pie-chart__legend-item strong {
@@ -1028,6 +1051,21 @@ body {
   border-radius: 50%;
   flex-shrink: 0;
   box-shadow: 0 0 12px rgba(15, 23, 42, 0.35);
+}
+
+@media (max-width: 600px) {
+  .pie-chart {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pie-chart__legend {
+    width: 100%;
+  }
+
+  .pie-chart__visual-wrapper {
+    width: 100%;
+  }
 }
 
 .mini-list {
