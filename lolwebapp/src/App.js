@@ -121,11 +121,11 @@ function App() {
   const [copyFeedback, setCopyFeedback] = useState("");
   const copyTimeoutRef = useRef(null);
   useEffect(() => {
-    const fadeTimer = setTimeout(() => setIntroStage("exit"), 2600);
+    const fadeTimer = setTimeout(() => setIntroStage("exit"), 2200);
     const endTimer = setTimeout(() => {
       setIntroStage("hidden");
       setAnimateApp(true);
-    }, 4000);
+    }, 3600);
 
     return () => {
       clearTimeout(fadeTimer);
@@ -381,17 +381,14 @@ function App() {
       {introVisible && (
         <div className={`intro-screen intro-screen--${introStage}`}>
           <div className="intro-screen__backdrop">
-            <span className="intro-screen__halo" />
-            <span className="intro-screen__flare intro-screen__flare--one" />
-            <span className="intro-screen__flare intro-screen__flare--two" />
             <span className="intro-screen__sigil intro-screen__sigil--outer" />
             <span className="intro-screen__sigil intro-screen__sigil--inner" />
             <span className="intro-screen__glyph intro-screen__glyph--left" />
             <span className="intro-screen__glyph intro-screen__glyph--right" />
           </div>
           <div className="intro-screen__overlay">
-            <span className="intro-screen__tag">Summoner's Briefing</span>
-            <h1 className="intro-screen__headline">LoL Assistant</h1>
+            <span className="intro-screen__tag">Summoner's Uplink</span>
+            <h1 className="intro-screen__headline">LOL Forge</h1>
             <p className="intro-screen__subtitle">
               Syncing Hextech telemetry from across Runeterra…
             </p>

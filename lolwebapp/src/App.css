@@ -26,11 +26,16 @@ body {
     "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans",
     "Helvetica Neue", sans-serif;
   background:
-    radial-gradient(140% 160% at 15% 20%, rgba(59, 130, 246, 0.2), transparent),
-    radial-gradient(120% 140% at 85% 12%, rgba(236, 72, 153, 0.18), transparent),
-    linear-gradient(160deg, rgba(4, 7, 20, 0.78), rgba(4, 7, 20, 0.24)),
-    url("./assets/1184580-popular-league-of-legends-ashe-wallpaper-1920x1080-mac.jpg")
-      center / cover no-repeat fixed;
+    radial-gradient(120% 140% at 10% 20%, rgba(56, 189, 248, 0.16), transparent),
+    radial-gradient(80% 120% at 85% 10%, rgba(236, 72, 153, 0.18), transparent),
+    conic-gradient(
+      from 140deg at 50% 20%,
+      rgba(14, 116, 144, 0.22),
+      rgba(107, 70, 193, 0.08),
+      rgba(56, 189, 248, 0.18),
+      rgba(236, 72, 153, 0.05)
+    ),
+    linear-gradient(135deg, rgba(3, 7, 18, 0.98), rgba(15, 23, 42, 0.9));
   color: var(--text-primary);
   display: flex;
   align-items: stretch;
@@ -45,34 +50,15 @@ body::before {
   position: fixed;
   inset: -120px;
   background:
-    radial-gradient(circle at 12% 12%, rgba(236, 72, 153, 0.18), transparent 58%),
-    radial-gradient(circle at 82% 10%, rgba(56, 189, 248, 0.22), transparent 62%),
+    radial-gradient(circle at 0% 0%, rgba(236, 72, 153, 0.14), transparent 60%),
+    radial-gradient(circle at 100% 0%, rgba(56, 189, 248, 0.18), transparent 62%),
     repeating-conic-gradient(
       from 45deg,
-      rgba(148, 163, 184, 0.14) 0deg 12deg,
-      transparent 12deg 45deg
+      rgba(148, 163, 184, 0.12) 0deg 15deg,
+      transparent 15deg 45deg
     );
   opacity: 0.22;
   mix-blend-mode: screen;
-  pointer-events: none;
-  z-index: -2;
-}
-
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background:
-    linear-gradient(160deg, rgba(7, 11, 26, 0.42), transparent 50%),
-    repeating-linear-gradient(
-      135deg,
-      rgba(148, 163, 184, 0.12),
-      rgba(148, 163, 184, 0.12) 1px,
-      transparent 1px,
-      transparent 28px
-    );
-  mix-blend-mode: soft-light;
-  opacity: 0.32;
   pointer-events: none;
   z-index: -1;
 }
@@ -98,12 +84,11 @@ body::after {
   align-items: center;
   justify-content: center;
   background:
-    radial-gradient(120% 160% at 50% 25%, rgba(59, 130, 246, 0.5), rgba(3, 7, 18, 0.96)),
-    linear-gradient(200deg, rgba(4, 6, 20, 0.95), rgba(15, 23, 42, 0.92));
+    radial-gradient(circle at 50% 20%, rgba(79, 70, 229, 0.45), rgba(2, 6, 23, 0.9)),
+    linear-gradient(180deg, rgba(3, 7, 18, 0.92), rgba(15, 23, 42, 0.96));
   z-index: 10;
   overflow: hidden;
   opacity: 0;
-  transform: scale(1.04);
 }
 
 .intro-screen__backdrop {
@@ -115,52 +100,11 @@ body::after {
   pointer-events: none;
 }
 
-.intro-screen__halo {
-  position: absolute;
-  width: min(620px, 82vw);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.35), transparent 68%);
-  filter: blur(2px);
-  animation: introHaloPulse 6s ease-in-out infinite;
-}
-
-.intro-screen__flare {
-  position: absolute;
-  width: 420px;
-  height: 420px;
-  border-radius: 50%;
-  background: conic-gradient(
-    from 90deg,
-    rgba(236, 72, 153, 0.3),
-    rgba(59, 130, 246, 0.05),
-    rgba(236, 72, 153, 0.3)
-  );
-  filter: blur(6px);
-  mix-blend-mode: screen;
-  opacity: 0.35;
-  animation: introFlareSweep 5s linear infinite;
-}
-
-.intro-screen__flare--one {
-  top: 18%;
-  left: 24%;
-}
-
-.intro-screen__flare--two {
-  bottom: 16%;
-  right: 20%;
-  animation-direction: reverse;
-  animation-duration: 6.2s;
-}
-
 .intro-screen__sigil {
   position: absolute;
   border-radius: 50%;
-  border: 2px solid rgba(148, 163, 184, 0.32);
-  box-shadow:
-    0 0 120px rgba(56, 189, 248, 0.18),
-    0 0 40px rgba(14, 165, 233, 0.25) inset;
+  border: 2px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 0 120px rgba(56, 189, 248, 0.22);
   animation: introSigilPulse 6s linear infinite;
 }
 
@@ -182,10 +126,9 @@ body::after {
   width: 160px;
   height: 160px;
   border-radius: 32px;
-  border: 1px solid rgba(59, 130, 246, 0.35);
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.24), transparent);
+  border: 1px solid rgba(236, 72, 153, 0.32);
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.2), transparent);
   filter: blur(0.4px);
-  box-shadow: 0 0 40px rgba(59, 130, 246, 0.22);
   animation: introGlyphDrift 7s ease-in-out infinite;
 }
 
@@ -208,11 +151,10 @@ body::after {
   align-items: center;
   justify-content: center;
   gap: 18px;
-  background: linear-gradient(180deg, rgba(4, 7, 20, 0.3), rgba(4, 7, 20, 0.75));
+  background: linear-gradient(180deg, rgba(4, 7, 20, 0.35), rgba(4, 7, 20, 0.85));
   text-align: center;
   padding: 0 24px;
   color: #f8fafc;
-  animation: introContentReveal 1.6s ease forwards 0.2s;
 }
 
 .intro-screen__tag {
@@ -225,9 +167,7 @@ body::after {
   text-transform: uppercase;
   letter-spacing: 0.32em;
   font-size: 0.75rem;
-  background: rgba(236, 72, 153, 0.22);
-  box-shadow: 0 0 24px rgba(236, 72, 153, 0.22);
-  animation: introTagPulse 2.8s ease-in-out infinite;
+  background: rgba(236, 72, 153, 0.2);
 }
 
 .intro-screen__headline {
@@ -235,9 +175,7 @@ body::after {
   font-size: clamp(2.4rem, 6vw, 3.6rem);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  text-shadow:
-    0 10px 40px rgba(0, 0, 0, 0.65),
-    0 0 32px rgba(59, 130, 246, 0.45);
+  text-shadow: 0 10px 40px rgba(0, 0, 0, 0.65);
 }
 
 .intro-screen__subtitle {
@@ -245,7 +183,6 @@ body::after {
   max-width: 520px;
   font-size: 1rem;
   color: rgba(226, 232, 240, 0.85);
-  text-shadow: 0 12px 32px rgba(2, 6, 23, 0.6);
 }
 
 .intro-screen__motif {
@@ -256,19 +193,15 @@ body::after {
   font-size: 0.85rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: rgba(226, 232, 240, 0.68);
+  color: rgba(226, 232, 240, 0.65);
 }
 
 .intro-screen--enter {
-  animation: introScreenEnter 2.6s cubic-bezier(0.16, 0.85, 0.32, 1) forwards;
+  animation: introFadeIn 2.2s ease forwards;
 }
 
 .intro-screen--exit {
-  animation: introScreenExit 1.2s ease forwards;
-}
-
-.intro-screen--exit .intro-screen__overlay {
-  animation: introContentFade 0.9s ease forwards;
+  animation: introFadeOut 1s ease forwards;
 }
 
 .app--enter {
@@ -286,76 +219,25 @@ body::after {
   }
 }
 
-@keyframes introScreenEnter {
+@keyframes introFadeIn {
   0% {
     opacity: 0;
     transform: scale(1.08);
-    filter: blur(12px);
-    clip-path: inset(22% 22% 22% 22%);
-  }
-  55% {
-    opacity: 1;
-    transform: scale(1);
-    filter: blur(0px);
-    clip-path: inset(0 0 0 0);
   }
   100% {
     opacity: 1;
     transform: scale(1);
-    filter: blur(0px);
   }
 }
 
-@keyframes introScreenExit {
+@keyframes introFadeOut {
   0% {
     opacity: 1;
     transform: scale(1);
-    filter: blur(0px);
   }
   100% {
     opacity: 0;
-    transform: scale(0.92);
-    filter: blur(10px);
-  }
-}
-
-@keyframes introContentReveal {
-  0% {
-    opacity: 0;
-    transform: translateY(32px);
-    letter-spacing: 0.38em;
-  }
-  55% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  100% {
-    letter-spacing: 0.32em;
-  }
-}
-
-@keyframes introTagPulse {
-  0%,
-  100% {
-    box-shadow: 0 0 24px rgba(236, 72, 153, 0.22);
-    transform: translateY(0);
-  }
-  50% {
-    box-shadow: 0 0 36px rgba(236, 72, 153, 0.32);
-    transform: translateY(-2px);
-  }
-}
-
-@keyframes introContentFade {
-  0% {
-    opacity: 1;
-    filter: blur(0px);
-    transform: translateY(0);
-  }
-  100% {
-    opacity: 0;
-    filter: blur(12px);
-    transform: translateY(-16px);
+    transform: scale(0.96);
   }
 }
 
@@ -363,11 +245,11 @@ body::after {
   0%,
   100% {
     transform: scale(1);
-    opacity: 0.55;
+    opacity: 0.6;
   }
   50% {
     transform: scale(1.05);
-    opacity: 0.95;
+    opacity: 1;
   }
 }
 
@@ -378,32 +260,6 @@ body::after {
   }
   50% {
     transform: translate3d(12px, -10px, 0) rotate(6deg);
-  }
-}
-
-@keyframes introHaloPulse {
-  0%,
-  100% {
-    transform: scale(0.98);
-    opacity: 0.45;
-  }
-  50% {
-    transform: scale(1.05);
-    opacity: 0.75;
-  }
-}
-
-@keyframes introFlareSweep {
-  0% {
-    transform: rotate(0deg) scale(0.95);
-    opacity: 0.3;
-  }
-  50% {
-    opacity: 0.45;
-  }
-  100% {
-    transform: rotate(360deg) scale(1.05);
-    opacity: 0.3;
   }
 }
 
