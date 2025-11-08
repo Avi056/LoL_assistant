@@ -195,6 +195,54 @@ const formatDateLabel = (isoString) => {
   }
 };
 
+const toRadians = (degrees) => (degrees * Math.PI) / 180;
+
+const polarToCartesian = (center, radius, angleInDegrees) => {
+  const angleInRadians = toRadians(angleInDegrees - 90);
+  return {
+    x: center + radius * Math.cos(angleInRadians),
+    y: center + radius * Math.sin(angleInRadians),
+  };
+};
+
+const describeDonutSegment = (center, outerRadius, thickness, startAngle, endAngle) => {
+  const innerRadius = outerRadius - thickness;
+  const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+  const outerStart = polarToCartesian(center, outerRadius, startAngle);
+  const outerEnd = polarToCartesian(center, outerRadius, endAngle);
+  const innerEnd = polarToCartesian(center, innerRadius, endAngle);
+  const innerStart = polarToCartesian(center, innerRadius, startAngle);
+
+  return [
+    "M",
+    outerStart.x,
+    outerStart.y,
+    "A",
+    outerRadius,
+    outerRadius,
+    0,
+    largeArcFlag,
+    1,
+    outerEnd.x,
+    outerEnd.y,
+    "L",
+    innerEnd.x,
+    innerEnd.y,
+    "A",
+    innerRadius,
+    innerRadius,
+    0,
+    largeArcFlag,
+    0,
+    innerStart.x,
+    innerStart.y,
+    "Z",
+  ].join(" ");
+};
+
+const formatPercent = (value, total) =>
+  Math.round((value / total) * 1000) / 10 || 0;
+
 const PieChart = ({
   data = [],
   labelKey = "label",
@@ -202,6 +250,7 @@ const PieChart = ({
   centerLabel = "",
   emptyMessage = "No data available.",
 }) => {
+  const [hoveredIndex, setHoveredIndex] = useState(null);
   const series = data.filter((entry) => {
     const value = entry?.[valueKey];
     return typeof value === "number" && value > 0;
@@ -213,49 +262,89 @@ const PieChart = ({
   }
 
   let currentAngle = 0;
-  const gradientStops = series.map((entry, index) => {
+  const center = 110;
+  const outerRadius = 90;
+  const thickness = 26;
+
+  const segments = series.map((entry, index) => {
     const value = entry[valueKey];
     const fraction = value / total;
-    const start = currentAngle;
-    currentAngle += fraction * 360;
-    const end = index === series.length - 1 ? 360 : currentAngle;
+    const startAngle = currentAngle * 360;
+    currentAngle += fraction;
+    const endAngle = currentAngle * 360;
     const color = PIE_CHART_COLORS[index % PIE_CHART_COLORS.length];
-    return `${color} ${start}deg ${end}deg`;
+    return {
+      path: describeDonutSegment(center, outerRadius, thickness, startAngle, endAngle),
+      color,
+      value,
+      label: entry[labelKey] ?? `Entry ${index + 1}`,
+      percent: formatPercent(value, total),
+      index,
+    };
   });
 
-  const pieStyle = {
-    "--pie-gradient": `conic-gradient(${gradientStops.join(", ")})`,
-  };
+  const activeSegment =
+    (hoveredIndex != null && segments.find((segment) => segment.index === hoveredIndex)) ||
+    null;
+  const activeValue = activeSegment ? activeSegment.value : total;
+  const activeLabel = activeSegment
+    ? `${activeSegment.label} · ${activeSegment.percent}%`
+    : centerLabel || "games";
 
   return (
     <div className="pie-chart">
-      <div className="pie-chart__visual" style={pieStyle}>
-        <div className="pie-chart__center">
-          <strong>{total}</strong>
-          <span>{centerLabel}</span>
+      <div className="pie-chart__visual-wrapper">
+        <div className="pie-chart__visual">
+          <svg
+            viewBox="0 0 220 220"
+            role="img"
+            aria-label={`Donut chart showing ${series.length} segments`}
+          >
+            {segments.map((segment) => (
+              <path
+                key={`${segment.label}-${segment.index}`}
+                d={segment.path}
+                fill={segment.color}
+                className={`pie-chart__segment${
+                  segment.index === hoveredIndex ? " pie-chart__segment--active" : ""
+                }`}
+                onMouseEnter={() => setHoveredIndex(segment.index)}
+                onMouseLeave={() => setHoveredIndex(null)}
+              >
+                <title>
+                  {segment.label}: {segment.value} games ({segment.percent}%)
+                </title>
+              </path>
+            ))}
+          </svg>
+          <div className="pie-chart__center">
+            <strong>{activeValue}</strong>
+            <span>{activeLabel}</span>
+          </div>
         </div>
       </div>
       <ul className="pie-chart__legend">
-        {series.map((entry, index) => {
-          const value = entry[valueKey];
-          const percent = Math.round((value / total) * 1000) / 10;
-          const color = PIE_CHART_COLORS[index % PIE_CHART_COLORS.length];
-          const label = entry[labelKey] ?? `Entry ${index + 1}`;
-          return (
-            <li key={`${label}-${index}`} className="pie-chart__legend-item">
-              <span
-                className="pie-chart__swatch"
-                style={{ backgroundColor: color }}
-              />
-              <div>
-                <strong>{label}</strong>
-                <span>
-                  {value} games · {percent}%
-                </span>
-              </div>
-            </li>
-          );
-        })}
+        {segments.map((segment) => (
+          <li
+            key={`${segment.label}-${segment.index}`}
+            className={`pie-chart__legend-item${
+              segment.index === hoveredIndex ? " pie-chart__legend-item--active" : ""
+            }`}
+            onMouseEnter={() => setHoveredIndex(segment.index)}
+            onMouseLeave={() => setHoveredIndex(null)}
+          >
+            <span
+              className="pie-chart__swatch"
+              style={{ backgroundColor: segment.color }}
+            />
+            <div>
+              <strong>{segment.label}</strong>
+              <span>
+                {segment.value} games · {segment.percent}%
+              </span>
+            </div>
+          </li>
+        ))}
       </ul>
     </div>
   );
