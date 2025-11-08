@@ -31,12 +31,6 @@ const APP_SHARE_URL = "https://main.dmmttg0yma1yv.amplifyapp.com/";
 const DATA_DRAGON_VERSION = "14.24.1";
 const API_URL =
   "https://fiauf5t7o7.execute-api.us-east-1.amazonaws.com/InitialStage/matches";
-const IDENTITY_SHARE_PLATFORMS = [
-  { id: "instagram", label: "Instagram" },
-  { id: "twitter", label: "Twitter/X" },
-  { id: "reddit", label: "Reddit" },
-];
-
 const createEmptyRecap = ({ summoner, regionLabel }) => ({
   summoner: summoner || "Summoner#TAG",
   regionLabel: regionLabel || REGION_OPTIONS[0].label,
@@ -200,64 +194,150 @@ const buildIdentityShareImage = ({
   kdaRatio,
   avgGame,
   regionLabel,
+  trendFocus,
+  highlightTitle,
+  highlightDescription,
+  streak,
 }) => {
   if (typeof document === "undefined") return null;
-  const size = 900;
+  const size = 1024;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
 
-  const gradient = ctx.createLinearGradient(0, 0, size, size);
-  gradient.addColorStop(0, "#050817");
-  gradient.addColorStop(0.5, "#0f172a");
-  gradient.addColorStop(1, "#1d1342");
-  ctx.fillStyle = gradient;
+  const background = ctx.createLinearGradient(0, 0, size, size);
+  background.addColorStop(0, "#040714");
+  background.addColorStop(0.4, "#0f172a");
+  background.addColorStop(1, "#1a1036");
+  ctx.fillStyle = background;
   ctx.fillRect(0, 0, size, size);
 
-  ctx.strokeStyle = "rgba(124, 58, 237, 0.35)";
-  ctx.lineWidth = 6;
-  ctx.strokeRect(40, 40, size - 80, size - 80);
+  const glow = ctx.createRadialGradient(
+    size * 0.75,
+    size * 0.2,
+    40,
+    size * 0.75,
+    size * 0.2,
+    size * 0.6
+  );
+  glow.addColorStop(0, "rgba(124, 58, 237, 0.35)");
+  glow.addColorStop(1, "rgba(124, 58, 237, 0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, size, size);
 
-  ctx.fillStyle = "rgba(226, 232, 240, 0.7)";
-  ctx.font = "bold 26px 'Poppins', sans-serif";
+  ctx.strokeStyle = "rgba(124, 58, 237, 0.55)";
+  ctx.lineWidth = 8;
+  ctx.strokeRect(60, 60, size - 120, size - 120);
+
+  ctx.fillStyle = "rgba(226, 232, 240, 0.75)";
+  ctx.font = "600 34px 'Poppins', sans-serif";
   ctx.textBaseline = "top";
-  ctx.fillText("ACCOUNT SNAPSHOT", 80, 80);
+  ctx.fillText("ACCOUNT SNAPSHOT", 110, 120);
 
   ctx.fillStyle = "#f8fafc";
-  ctx.font = "700 64px 'Poppins', sans-serif";
-  ctx.fillText(summoner, 80, 140);
+  ctx.font = "700 84px 'Poppins', sans-serif";
+  ctx.fillText(summoner, 110, 190);
 
   ctx.fillStyle = "rgba(226, 232, 240, 0.85)";
-  ctx.font = "400 28px 'Poppins', sans-serif";
-  ctx.fillText(subtitle, 80, 220);
+  ctx.font = "400 34px 'Poppins', sans-serif";
+  ctx.fillText(subtitle, 110, 285);
+
+  ctx.fillStyle = "rgba(94, 234, 212, 0.3)";
+  ctx.beginPath();
+  ctx.arc(110, 400, 90, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(56, 189, 248, 0.2)";
+  ctx.beginPath();
+  ctx.arc(size - 220, 240, 140, 0, Math.PI * 2);
+  ctx.fill();
 
   const stats = [
     { label: "Win rate", value: winRate },
     { label: "KDA", value: kdaRatio },
     { label: "Avg game", value: avgGame },
+    { label: "Streak peak", value: `${streak || 0}W` },
   ];
-  ctx.font = "600 28px 'Poppins', sans-serif";
+  ctx.font = "600 30px 'Poppins', sans-serif";
   stats.forEach((stat, index) => {
-    const x = 80 + index * 240;
-    ctx.fillStyle = "rgba(148, 163, 184, 0.8)";
-    ctx.fillText(stat.label.toUpperCase(), x, 310);
+    const x = 110 + index * 210;
+    ctx.fillStyle = "rgba(148, 163, 184, 0.85)";
+    ctx.fillText(stat.label.toUpperCase(), x, 370);
     ctx.fillStyle = "#ffffff";
-    ctx.font = "700 54px 'Poppins', sans-serif";
-    ctx.fillText(String(stat.value || "—"), x, 380);
-    ctx.font = "600 28px 'Poppins', sans-serif";
+    ctx.font = "700 64px 'Poppins', sans-serif";
+    ctx.fillText(String(stat.value || "—"), x, 430);
+    ctx.font = "600 30px 'Poppins', sans-serif";
   });
 
-  ctx.fillStyle = "rgba(148, 163, 184, 0.9)";
-  ctx.font = "500 26px 'Poppins', sans-serif";
-  ctx.fillText(`Region · ${regionLabel}`, 80, 500);
+  const highlightBoxY = 560;
+  ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+  ctx.strokeStyle = "rgba(124, 58, 237, 0.4)";
+  ctx.lineWidth = 3;
+  drawRoundedRect(ctx, 110, highlightBoxY, size - 220, 180, 24);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "rgba(226, 232, 240, 0.8)";
+  ctx.font = "500 28px 'Poppins', sans-serif";
+  ctx.fillText(highlightTitle || "Momentum spotlight", 140, highlightBoxY + 40);
+  ctx.fillStyle = "rgba(148, 163, 184, 0.95)";
+  ctx.font = "400 24px 'Poppins', sans-serif";
+  const highlightCopy =
+    highlightDescription ||
+    "Queue up to generate highlight insights from Riot telemetry.";
+  wrapAndFillText(
+    ctx,
+    highlightCopy,
+    140,
+    highlightBoxY + 90,
+    size - 280,
+    32
+  );
 
-  ctx.font = "400 22px 'Poppins', sans-serif";
-  ctx.fillText("Share your recap at riot-rift.com", 80, 560);
+  ctx.fillStyle = "rgba(148, 163, 184, 0.9)";
+  ctx.font = "500 28px 'Poppins', sans-serif";
+  ctx.fillText(`Region · ${regionLabel}`, 110, size - 180);
+  ctx.font = "500 28px 'Poppins', sans-serif";
+  ctx.fillText(`Trend focus · ${trendFocus}`, 110, size - 130);
+
+  ctx.font = "400 24px 'Poppins', sans-serif";
+  ctx.fillText("Share your recap at riot-rift.com", 110, size - 80);
 
   return canvas.toDataURL("image/png");
 };
+
+function wrapAndFillText(ctx, text, x, startY, maxWidth, lineHeight) {
+  const words = text.split(" ");
+  let line = "";
+  let y = startY;
+  words.forEach((word) => {
+    const testLine = line ? `${line} ${word}` : word;
+    if (ctx.measureText(testLine).width > maxWidth && line) {
+      ctx.fillText(line, x, y);
+      line = word;
+      y += lineHeight;
+    } else {
+      line = testLine;
+    }
+  });
+  if (line) ctx.fillText(line, x, y);
+}
+
+function drawRoundedRect(ctx, x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + width - r, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+  ctx.lineTo(x + width, y + height - r);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  ctx.lineTo(x + r, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
 
 const toRadians = (degrees) => (degrees * Math.PI) / 180;
 
@@ -435,17 +515,14 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [profileInsight, setProfileInsight] = useState(null);
-  const [leagueInsight, setLeagueInsight] = useState([]);
   const [statusInsight, setStatusInsight] = useState(null);
   const [advancedInsight, setAdvancedInsight] = useState(null);
   const [hasLiveInsights, setHasLiveInsights] = useState(false);
   const [aiError, setAiError] = useState("");
-  const [isIdentityShareMenuOpen, setIsIdentityShareMenuOpen] = useState(false);
   const [identityShareStatus, setIdentityShareStatus] = useState("");
   const introDelayTimeoutRef = useRef(null);
   const introHideTimeoutRef = useRef(null);
   const aiStatsRef = useRef(null);
-  const shareMenuRef = useRef(null);
 
   useEffect(() => {
     introDelayTimeoutRef.current = setTimeout(() => {
@@ -483,20 +560,6 @@ function App() {
     const timer = setTimeout(() => setIdentityShareStatus(""), 2600);
     return () => clearTimeout(timer);
   }, [identityShareStatus]);
-
-  useEffect(() => {
-    if (typeof document === "undefined" || !isIdentityShareMenuOpen) return;
-    const handleClick = (event) => {
-      if (
-        shareMenuRef.current &&
-        !shareMenuRef.current.contains(event.target)
-      ) {
-        setIsIdentityShareMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [isIdentityShareMenuOpen]);
 
   const regionDetails = useMemo(
     () => REGION_OPTIONS.find((option) => option.value === region),
@@ -610,7 +673,6 @@ function App() {
       setSummonerLabel(resolvedSummoner);
       setRecapData(normalizedRecap);
       setProfileInsight(payload.profile ?? null);
-      setLeagueInsight(payload.leagueSummary ?? []);
       setStatusInsight(payload.platformStatus ?? null);
       setAdvancedInsight(payload.advancedMetrics ?? null);
       setHasLiveInsights(true);
@@ -701,7 +763,7 @@ function App() {
     }
   };
 
-  const handleIdentityShare = (platform) => {
+  const handleIdentityShare = () => {
     try {
       if (typeof document === "undefined") {
         throw new Error("Share not available in this environment.");
@@ -715,22 +777,26 @@ function App() {
         kdaRatio,
         avgGame: resolvedAdvanced?.avgGameDurationLabel || "—",
         regionLabel: recapData.regionLabel,
+        trendFocus: recapData.trendFocus || "Lock in games to surface macro focus.",
+        highlightTitle: primaryHighlight?.title || "Momentum spotlight",
+        highlightDescription:
+          primaryHighlight?.description ||
+          (playstyleTags.length
+            ? `Playstyle tags: ${playstyleTags.join(" · ")}`
+            : "Lock in more matches to reveal highlight data."),
+        streak: recapData.kda.streak,
       });
       if (!imageUrl) {
         throw new Error("Unable to generate share image.");
       }
       const link = document.createElement("a");
       link.href = imageUrl;
-      link.download = `${recapData.summoner}-${platform}-snapshot.png`;
+      link.download = `${recapData.summoner}-snapshot.png`;
       link.click();
-      setIdentityShareStatus(
-        `Image saved for ${platform}. Finish the post in their app.`
-      );
+      setIdentityShareStatus("Snapshot saved. Share it anywhere you like.");
     } catch (shareError) {
       console.error(shareError);
       setIdentityShareStatus("Share export failed. Please try again.");
-    } finally {
-      setIsIdentityShareMenuOpen(false);
     }
   };
 
@@ -951,31 +1017,14 @@ function App() {
                         </p>
                       </div>
                     </div>
-                    <div className="identity-card__share" ref={shareMenuRef}>
+                    <div className="identity-card__share">
                       <button
                         type="button"
                         className="identity-card__share-button"
-                        onClick={() =>
-                          setIsIdentityShareMenuOpen((prev) => !prev)
-                        }
-                        aria-expanded={isIdentityShareMenuOpen}
+                        onClick={handleIdentityShare}
                       >
-                        Share
+                        Download card
                       </button>
-                      {isIdentityShareMenuOpen && (
-                        <div className="identity-card__share-menu">
-                          <p>Export for</p>
-                          {IDENTITY_SHARE_PLATFORMS.map((platform) => (
-                            <button
-                              key={platform.id}
-                              type="button"
-                              onClick={() => handleIdentityShare(platform.id)}
-                            >
-                              {platform.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   </div>
                   <div className="identity-card__stats">
