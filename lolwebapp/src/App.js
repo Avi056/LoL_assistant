@@ -12,6 +12,14 @@ const LEAGUE_LOGO_ASSET = "League-of-Legends-Logo.png";
 
 const introBackground = buildPublicAssetUrl(INTRO_BACKGROUND_ASSET);
 const leagueLogo = buildPublicAssetUrl(LEAGUE_LOGO_ASSET);
+const PIE_CHART_COLORS = [
+  "#7c3aed",
+  "#c084fc",
+  "#22d3ee",
+  "#34d399",
+  "#f97316",
+  "#f472b6",
+];
 
 const REGION_OPTIONS = [
   { value: "ASIA", label: "Asia", description: "KR, JP, OCE, PH, SG" },
@@ -107,6 +115,30 @@ const buildShareSummary = (recap, winRate, kdaRatio) => {
   ].join("\n");
 };
 
+const buildAiNarrative = (recap, winRate, kdaRatio) => {
+  const favoriteChamp = recap.matchHistory[0]?.champion ?? "your mains";
+  const streak = recap.kda.streak;
+  const standoutMoments = recap.highlightMoments
+    .map((moment) => `• ${moment.title} — ${moment.description}`)
+    .join("\n");
+  const tags = recap.playstyleTags.join(" · ") || "Data incoming soon";
+
+  return `✨ ${recap.summoner}'s Riot Rift Recap ✨
+
+Across ${recap.lastGamesCount} games in ${recap.regionLabel}, ${
+    recap.summoner
+  } logged a ${winRate}% win rate while averaging a ${kdaRatio} KDA. The longest win streak hit ${
+    streak
+  } games, led by ${favoriteChamp} and confident objective control.
+
+Playstyle remix: ${tags}.
+
+Standout moments:
+${standoutMoments || "• Pull fresh data to unlock highlight descriptions."}
+
+Live telemetry from Riot endpoints keeps the receipts. Queue up and write the next chapter. 🗡️`;
+};
+
 const copyTextToClipboard = async (text) => {
   try {
     if (
@@ -163,6 +195,72 @@ const formatDateLabel = (isoString) => {
   }
 };
 
+const PieChart = ({
+  data = [],
+  labelKey = "label",
+  valueKey = "value",
+  centerLabel = "",
+  emptyMessage = "No data available.",
+}) => {
+  const series = data.filter((entry) => {
+    const value = entry?.[valueKey];
+    return typeof value === "number" && value > 0;
+  });
+  const total = series.reduce((acc, entry) => acc + (entry?.[valueKey] ?? 0), 0);
+
+  if (!series.length || total === 0) {
+    return <p className="empty-state">{emptyMessage}</p>;
+  }
+
+  let currentAngle = 0;
+  const gradientStops = series.map((entry, index) => {
+    const value = entry[valueKey];
+    const fraction = value / total;
+    const start = currentAngle;
+    currentAngle += fraction * 360;
+    const end = index === series.length - 1 ? 360 : currentAngle;
+    const color = PIE_CHART_COLORS[index % PIE_CHART_COLORS.length];
+    return `${color} ${start}deg ${end}deg`;
+  });
+
+  const pieStyle = {
+    "--pie-gradient": `conic-gradient(${gradientStops.join(", ")})`,
+  };
+
+  return (
+    <div className="pie-chart">
+      <div className="pie-chart__visual" style={pieStyle}>
+        <div className="pie-chart__center">
+          <strong>{total}</strong>
+          <span>{centerLabel}</span>
+        </div>
+      </div>
+      <ul className="pie-chart__legend">
+        {series.map((entry, index) => {
+          const value = entry[valueKey];
+          const percent = Math.round((value / total) * 1000) / 10;
+          const color = PIE_CHART_COLORS[index % PIE_CHART_COLORS.length];
+          const label = entry[labelKey] ?? `Entry ${index + 1}`;
+          return (
+            <li key={`${label}-${index}`} className="pie-chart__legend-item">
+              <span
+                className="pie-chart__swatch"
+                style={{ backgroundColor: color }}
+              />
+              <div>
+                <strong>{label}</strong>
+                <span>
+                  {value} games · {percent}%
+                </span>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+};
+
 function App() {
   const [gameName, setGameName] = useState("");
   const [tagLine, setTagLine] = useState("");
@@ -195,14 +293,6 @@ function App() {
   const introDelayTimeoutRef = useRef(null);
   const introHideTimeoutRef = useRef(null);
   const aiStatsRef = useRef(null);
-
-  const aiParagraphs = useMemo(() => {
-    if (!recapNarrative) return [];
-    return recapNarrative
-      .split(/\r?\n+/)
-      .map((paragraph) => paragraph.trim())
-      .filter(Boolean);
-  }, [recapNarrative]);
 
   useEffect(() => {
     introDelayTimeoutRef.current = setTimeout(() => {
@@ -385,19 +475,8 @@ function App() {
           advancedMetrics: payload.advancedMetrics ?? null,
           matches: normalizedRecap.matchHistory ?? [],
         };
-      const initialAiFeedback = payload.aiFeedback || {};
-      const initialMessage =
-        typeof initialAiFeedback.message === "string"
-          ? initialAiFeedback.message.trim()
-          : "";
-      setRecapNarrative(initialMessage);
-      setAiError(initialAiFeedback.error || "");
-      if (initialMessage) {
-        console.info("Initial AI feedback message:", initialMessage);
-      }
-      if (initialAiFeedback.error) {
-        console.warn("Initial AI feedback error:", initialAiFeedback.error);
-      }
+      setRecapNarrative(payload.aiFeedback?.message || "");
+      setAiError(payload.aiFeedback?.error || "");
       setView("recap");
       setAnimateApp(true);
     } catch (requestError) {
@@ -484,8 +563,6 @@ function App() {
     setIsGeneratingRecap(true);
     setAiError("");
 
-    console.debug("Sending stats for AI feedback:", aiStatsRef.current);
-
     try {
       const response = await fetch(API_URL, {
         method: "POST",
@@ -511,18 +588,8 @@ function App() {
       }
 
       const aiFeedback = payload?.aiFeedback || {};
-      const regeneratedMessage =
-        typeof aiFeedback.message === "string"
-          ? aiFeedback.message.trim()
-          : "";
-      setRecapNarrative(regeneratedMessage);
+      setRecapNarrative(aiFeedback.message || "");
       setAiError(aiFeedback.error || "");
-      if (regeneratedMessage) {
-        console.info("Regenerated AI feedback message:", regeneratedMessage);
-      }
-      if (aiFeedback.error) {
-        console.warn("Regenerated AI feedback error:", aiFeedback.error);
-      }
     } catch (requestError) {
       console.error(requestError);
       setAiError(
@@ -635,23 +702,13 @@ function App() {
                     live Riot data below.
                   </p>
                 </header>
-                <div
-                  className={`ai-card__response ${
-                    aiParagraphs.length === 0 ? "ai-card__response--empty" : ""
-                  }`}
-                  aria-live="polite"
-                >
-                  {aiParagraphs.length > 0 ? (
-                    aiParagraphs.map((paragraph, index) => (
-                      <p key={`ai-feedback-${index}`}>{paragraph}</p>
-                    ))
-                  ) : (
-                    <p className="ai-card__placeholder">
-                      Tap Generate Feedback to summon a spicy-yet-helpful roast
-                      from Claude.
-                    </p>
-                  )}
-                </div>
+                <textarea
+                  className="ai-card__textarea"
+                  rows={8}
+                  value={recapNarrative}
+                  placeholder="Tap Generate Feedback to summon a spicy-yet-helpful roast from Claude."
+                  readOnly
+                />
                 <div className="ai-card__actions">
                   <button
                     type="button"
@@ -726,7 +783,7 @@ function App() {
                     </div>
                     <div>
                       <span>KDA</span>
-                      <strong>{kdaRatio}:1</strong>
+                      <strong>{kdaRatio}</strong>
                     </div>
                     <div>
                       <span>Avg game</span>
@@ -1026,35 +1083,25 @@ function App() {
                   <span>Top pulls from match-v5</span>
                 </header>
                 <div className="champion-card__body">
-                  <div>
+                  <div className="champion-card__section">
                     <h4>Most played champs</h4>
-                    {championPool.length > 0 ? (
-                      <ul className="mini-list">
-                        {championPool.map((entry) => (
-                          <li key={entry.champion}>
-                            <span>{entry.champion}</span>
-                            <strong>{entry.count} games</strong>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="empty-state">No champion data yet.</p>
-                    )}
+                    <PieChart
+                      data={championPool}
+                      labelKey="champion"
+                      valueKey="count"
+                      centerLabel="games"
+                      emptyMessage="No champion data yet."
+                    />
                   </div>
-                  <div>
+                  <div className="champion-card__section">
                     <h4>Role distribution</h4>
-                    {roleDistribution.length > 0 ? (
-                      <ul className="mini-list">
-                        {roleDistribution.map((entry) => (
-                          <li key={entry.role}>
-                            <span>{entry.role}</span>
-                            <strong>{entry.count}</strong>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="empty-state">No role data yet.</p>
-                    )}
+                    <PieChart
+                      data={roleDistribution}
+                      labelKey="role"
+                      valueKey="count"
+                      centerLabel="games"
+                      emptyMessage="No role data yet."
+                    />
                   </div>
                 </div>
               </article>
