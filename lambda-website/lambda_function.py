@@ -704,14 +704,17 @@ def lambda_handler(event, context):
             f"https://{routing}.api.riotgames.com/lol/match/v5/matches/by-puuid/"
             f"{puuid}/ids"
         )
-        count_param = max(MATCH_DETAIL_LIMIT, MATCH_ID_LIMIT)
-        match_ids = _riot_get_json(match_url, params={"count": count_param}) or []
+        desired_window = max(MATCH_DETAIL_LIMIT, MATCH_ID_LIMIT)
+        id_fetch_target = min(100, max(desired_window * 2, desired_window))
+        match_ids = _riot_get_json(
+            match_url, params={"count": id_fetch_target}
+        ) or []
         trimmed_match_ids = match_ids[:MATCH_ID_LIMIT]
 
         # Step 3: Fetch match details for recap
         detailed_entries: List[Dict[str, Any]] = []
         platform_host: Optional[str] = None
-        for match_id in match_ids[:MATCH_DETAIL_LIMIT]:
+        for match_id in match_ids:
             detail_url = (
                 f"https://{routing}.api.riotgames.com/lol/match/v5/matches/{match_id}"
             )
@@ -725,6 +728,8 @@ def lambda_handler(event, context):
             detailed_entries.append(entry)
             if not platform_host and platform_id:
                 platform_host = platform_id.lower()
+            if len(detailed_entries) >= MATCH_DETAIL_LIMIT:
+                break
 
         if not detailed_entries:
             return _build_response(
@@ -806,6 +811,14 @@ def lambda_handler(event, context):
                 "advancedMetrics": advanced_metrics,
                 "aiFeedback": ai_feedback,
                 "aiStatsContext": stats_context,
+                "limits": {
+                    "matchIdLimit": MATCH_ID_LIMIT,
+                    "matchDetailLimit": MATCH_DETAIL_LIMIT,
+                    "matchHistoryLimit": MATCH_HISTORY_LIMIT,
+                    "idFetchWindow": id_fetch_target,
+                    "idsReturned": len(match_ids),
+                    "detailedMatches": len(detailed_entries),
+                },
             },
         )
 
