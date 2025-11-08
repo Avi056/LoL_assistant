@@ -217,6 +217,7 @@ function App() {
     })
   );
   const [showIntro, setShowIntro] = useState(true);
+  const [introStage, setIntroStage] = useState("enter");
   const [animateApp, setAnimateApp] = useState(false);
   const [shareFeedback, setShareFeedback] = useState("");
   const [recapNarrative, setRecapNarrative] = useState("");
@@ -227,13 +228,26 @@ function App() {
   const [error, setError] = useState(null);
   const [copyFeedback, setCopyFeedback] = useState("");
   const copyTimeoutRef = useRef(null);
+  const introDelayTimeoutRef = useRef(null);
+  const introHideTimeoutRef = useRef(null);
 
   useEffect(() => {
-    const introTimer = setTimeout(() => {
-      setShowIntro(false);
-      setAnimateApp(true);
+    introDelayTimeoutRef.current = setTimeout(() => {
+      setIntroStage("exit");
+      introHideTimeoutRef.current = setTimeout(() => {
+        setShowIntro(false);
+        setAnimateApp(true);
+      }, 600);
     }, 3000);
-    return () => clearTimeout(introTimer);
+
+    return () => {
+      if (introDelayTimeoutRef.current) {
+        clearTimeout(introDelayTimeoutRef.current);
+      }
+      if (introHideTimeoutRef.current) {
+        clearTimeout(introHideTimeoutRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -452,7 +466,7 @@ function App() {
   return (
     <div className="app-shell">
       {showIntro && (
-        <div className="intro-screen">
+        <div className={`intro-screen intro-screen--${introStage}`}>
           <img
             className="intro-screen__image"
             src={introImage}
