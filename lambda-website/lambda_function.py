@@ -18,9 +18,19 @@ except ImportError:  # pragma: no cover - lambda environment provides boto3
 RIOT_API_KEY = os.environ.get("RIOT_API_KEY")
 CUSTOM_API_KEY = os.environ.get("CUSTOM_API_KEY")
 
-MATCH_ID_LIMIT = int(os.environ.get("MATCH_ID_LIMIT", "20"))
-MATCH_DETAIL_LIMIT = int(os.environ.get("MATCH_DETAIL_LIMIT", "20"))
-MATCH_HISTORY_LIMIT = int(os.environ.get("MATCH_HISTORY_LIMIT", "20"))
+
+def _resolve_limit(var_name: str, minimum: int) -> int:
+    raw_value = os.environ.get(var_name)
+    try:
+        parsed = int(raw_value) if raw_value is not None else minimum
+    except (TypeError, ValueError):
+        parsed = minimum
+    return max(minimum, parsed)
+
+
+MATCH_ID_LIMIT = _resolve_limit("MATCH_ID_LIMIT", 20)
+MATCH_DETAIL_LIMIT = _resolve_limit("MATCH_DETAIL_LIMIT", 20)
+MATCH_HISTORY_LIMIT = _resolve_limit("MATCH_HISTORY_LIMIT", 20)
 
 DEFAULT_PLATFORM_BY_REGION = {
     "AMERICAS": "na1",
