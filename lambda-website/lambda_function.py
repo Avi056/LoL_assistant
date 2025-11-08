@@ -18,9 +18,9 @@ except ImportError:  # pragma: no cover - lambda environment provides boto3
 RIOT_API_KEY = os.environ.get("RIOT_API_KEY")
 CUSTOM_API_KEY = os.environ.get("CUSTOM_API_KEY")
 
-MATCH_ID_LIMIT = int(os.environ.get("MATCH_ID_LIMIT", "5"))
-MATCH_DETAIL_LIMIT = int(os.environ.get("MATCH_DETAIL_LIMIT", "10"))
-MATCH_HISTORY_LIMIT = int(os.environ.get("MATCH_HISTORY_LIMIT", "5"))
+MATCH_ID_LIMIT = int(os.environ.get("MATCH_ID_LIMIT", "20"))
+MATCH_DETAIL_LIMIT = int(os.environ.get("MATCH_DETAIL_LIMIT", "20"))
+MATCH_HISTORY_LIMIT = int(os.environ.get("MATCH_HISTORY_LIMIT", "20"))
 
 DEFAULT_PLATFORM_BY_REGION = {
     "AMERICAS": "na1",

@@ -12,6 +12,14 @@ const LEAGUE_LOGO_ASSET = "League-of-Legends-Logo.png";
 
 const introBackground = buildPublicAssetUrl(INTRO_BACKGROUND_ASSET);
 const leagueLogo = buildPublicAssetUrl(LEAGUE_LOGO_ASSET);
+const PIE_CHART_COLORS = [
+  "#7c3aed",
+  "#c084fc",
+  "#22d3ee",
+  "#34d399",
+  "#f97316",
+  "#f472b6",
+];
 
 const REGION_OPTIONS = [
   { value: "ASIA", label: "Asia", description: "KR, JP, OCE, PH, SG" },
@@ -107,6 +115,30 @@ const buildShareSummary = (recap, winRate, kdaRatio) => {
   ].join("\n");
 };
 
+const buildAiNarrative = (recap, winRate, kdaRatio) => {
+  const favoriteChamp = recap.matchHistory[0]?.champion ?? "your mains";
+  const streak = recap.kda.streak;
+  const standoutMoments = recap.highlightMoments
+    .map((moment) => `• ${moment.title} — ${moment.description}`)
+    .join("\n");
+  const tags = recap.playstyleTags.join(" · ") || "Data incoming soon";
+
+  return `✨ ${recap.summoner}'s Riot Rift Recap ✨
+
+Across ${recap.lastGamesCount} games in ${recap.regionLabel}, ${
+    recap.summoner
+  } logged a ${winRate}% win rate while averaging a ${kdaRatio} KDA. The longest win streak hit ${
+    streak
+  } games, led by ${favoriteChamp} and confident objective control.
+
+Playstyle remix: ${tags}.
+
+Standout moments:
+${standoutMoments || "• Pull fresh data to unlock highlight descriptions."}
+
+Live telemetry from Riot endpoints keeps the receipts. Queue up and write the next chapter. 🗡️`;
+};
+
 const copyTextToClipboard = async (text) => {
   try {
     if (
@@ -161,6 +193,72 @@ const formatDateLabel = (isoString) => {
   } catch {
     return null;
   }
+};
+
+const PieChart = ({
+  data = [],
+  labelKey = "label",
+  valueKey = "value",
+  centerLabel = "",
+  emptyMessage = "No data available.",
+}) => {
+  const series = data.filter((entry) => {
+    const value = entry?.[valueKey];
+    return typeof value === "number" && value > 0;
+  });
+  const total = series.reduce((acc, entry) => acc + (entry?.[valueKey] ?? 0), 0);
+
+  if (!series.length || total === 0) {
+    return <p className="empty-state">{emptyMessage}</p>;
+  }
+
+  let currentAngle = 0;
+  const gradientStops = series.map((entry, index) => {
+    const value = entry[valueKey];
+    const fraction = value / total;
+    const start = currentAngle;
+    currentAngle += fraction * 360;
+    const end = index === series.length - 1 ? 360 : currentAngle;
+    const color = PIE_CHART_COLORS[index % PIE_CHART_COLORS.length];
+    return `${color} ${start}deg ${end}deg`;
+  });
+
+  const pieStyle = {
+    "--pie-gradient": `conic-gradient(${gradientStops.join(", ")})`,
+  };
+
+  return (
+    <div className="pie-chart">
+      <div className="pie-chart__visual" style={pieStyle}>
+        <div className="pie-chart__center">
+          <strong>{total}</strong>
+          <span>{centerLabel}</span>
+        </div>
+      </div>
+      <ul className="pie-chart__legend">
+        {series.map((entry, index) => {
+          const value = entry[valueKey];
+          const percent = Math.round((value / total) * 1000) / 10;
+          const color = PIE_CHART_COLORS[index % PIE_CHART_COLORS.length];
+          const label = entry[labelKey] ?? `Entry ${index + 1}`;
+          return (
+            <li key={`${label}-${index}`} className="pie-chart__legend-item">
+              <span
+                className="pie-chart__swatch"
+                style={{ backgroundColor: color }}
+              />
+              <div>
+                <strong>{label}</strong>
+                <span>
+                  {value} games · {percent}%
+                </span>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
 };
 
 function App() {
@@ -685,7 +783,7 @@ function App() {
                     </div>
                     <div>
                       <span>KDA</span>
-                      <strong>{kdaRatio}:1</strong>
+                      <strong>{kdaRatio}</strong>
                     </div>
                     <div>
                       <span>Avg game</span>
@@ -985,35 +1083,25 @@ function App() {
                   <span>Top pulls from match-v5</span>
                 </header>
                 <div className="champion-card__body">
-                  <div>
+                  <div className="champion-card__section">
                     <h4>Most played champs</h4>
-                    {championPool.length > 0 ? (
-                      <ul className="mini-list">
-                        {championPool.map((entry) => (
-                          <li key={entry.champion}>
-                            <span>{entry.champion}</span>
-                            <strong>{entry.count} games</strong>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="empty-state">No champion data yet.</p>
-                    )}
+                    <PieChart
+                      data={championPool}
+                      labelKey="champion"
+                      valueKey="count"
+                      centerLabel="games"
+                      emptyMessage="No champion data yet."
+                    />
                   </div>
-                  <div>
+                  <div className="champion-card__section">
                     <h4>Role distribution</h4>
-                    {roleDistribution.length > 0 ? (
-                      <ul className="mini-list">
-                        {roleDistribution.map((entry) => (
-                          <li key={entry.role}>
-                            <span>{entry.role}</span>
-                            <strong>{entry.count}</strong>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="empty-state">No role data yet.</p>
-                    )}
+                    <PieChart
+                      data={roleDistribution}
+                      labelKey="role"
+                      valueKey="count"
+                      centerLabel="games"
+                      emptyMessage="No role data yet."
+                    />
                   </div>
                 </div>
               </article>
