@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
-import introImage from "./assets/1568742297124374.jpeg";
+
+const buildPublicAssetUrl = (fileName) => {
+  const base = process.env.PUBLIC_URL ?? "";
+  const normalizedBase = base.endsWith("/") ? base.slice(0, -1) : base;
+  return `${normalizedBase}/assets/${encodeURI(fileName)}`;
+};
+
+const INTRO_BACKGROUND_ASSET = "dark blue league of legends background.jpg";
+const LEAGUE_LOGO_ASSET = "League-of-Legends-Logo.png";
+
+const introBackground = buildPublicAssetUrl(INTRO_BACKGROUND_ASSET);
+const leagueLogo = buildPublicAssetUrl(LEAGUE_LOGO_ASSET);
 
 const REGION_OPTIONS = [
   { value: "ASIA", label: "Asia", description: "KR, JP, OCE, PH, SG" },
@@ -628,9 +639,9 @@ function App() {
       {showIntro && (
         <div className={`intro-screen intro-screen--${introStage}`}>
           <img
-            className="intro-screen__image"
-            src={introImage}
-            alt="Loading splash art"
+            className="intro-screen__logo"
+            src={leagueLogo}
+            alt="League of Legends logo"
           />
         </div>
       )}
