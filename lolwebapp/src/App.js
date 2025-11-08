@@ -367,18 +367,15 @@ function App() {
   const [shareFeedback, setShareFeedback] = useState("");
   const [recapNarrative, setRecapNarrative] = useState("");
   const [isGeneratingRecap, setIsGeneratingRecap] = useState(false);
-  const [matches, setMatches] = useState([]);
   const [summonerLabel, setSummonerLabel] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [copyFeedback, setCopyFeedback] = useState("");
   const [profileInsight, setProfileInsight] = useState(null);
   const [leagueInsight, setLeagueInsight] = useState([]);
   const [statusInsight, setStatusInsight] = useState(null);
   const [advancedInsight, setAdvancedInsight] = useState(null);
   const [hasLiveInsights, setHasLiveInsights] = useState(false);
   const [aiError, setAiError] = useState("");
-  const copyTimeoutRef = useRef(null);
   const introDelayTimeoutRef = useRef(null);
   const introHideTimeoutRef = useRef(null);
   const aiStatsRef = useRef(null);
@@ -413,12 +410,6 @@ function App() {
     const timer = setTimeout(() => setShareFeedback(""), 2600);
     return () => clearTimeout(timer);
   }, [shareFeedback]);
-
-  useEffect(() => {
-    return () => {
-      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
-    };
-  }, []);
 
   const regionDetails = useMemo(
     () => REGION_OPTIONS.find((option) => option.value === region),
@@ -501,9 +492,7 @@ function App() {
 
     setLoading(true);
     setError(null);
-    setMatches([]);
     setSummonerLabel("");
-    setCopyFeedback("");
     setRecapNarrative("");
     setAiError("");
     aiStatsRef.current = null;
@@ -533,7 +522,8 @@ function App() {
         throw new Error(message);
       }
 
-      if (!payload?.matches?.length) {
+      const recapMatches = payload?.recap?.matchHistory ?? [];
+      if (recapMatches.length === 0) {
         setSummonerLabel(payload?.summoner || `${trimmedName}#${trimmedTag}`);
         setError("No matches found for this Riot ID.");
         return;
@@ -547,7 +537,6 @@ function App() {
         regionLabel
       );
 
-      setMatches(payload.matches || []);
       setSummonerLabel(resolvedSummoner);
       setRecapData(normalizedRecap);
       setProfileInsight(payload.profile ?? null);
@@ -687,15 +676,6 @@ function App() {
     } finally {
       setIsGeneratingRecap(false);
     }
-  };
-
-  const handleCopy = async (matchId) => {
-    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
-    const copied = await copyTextToClipboard(matchId);
-    setCopyFeedback(
-      copied ? `Copied ${matchId}` : "Copy failed. Please copy manually."
-    );
-    copyTimeoutRef.current = setTimeout(() => setCopyFeedback(""), 2000);
   };
 
   return (
@@ -1195,82 +1175,6 @@ function App() {
                 </div>
               </article>
 
-              <article className="insight-card league-card">
-                <header className="insight-card__header">
-                  <h3>League ladders</h3>
-                  <span>Direct from league-v4</span>
-                </header>
-                {resolvedLeague.length > 0 ? (
-                  <ul className="mini-list league-list">
-                    {resolvedLeague.map((entry) => (
-                      <li key={`${entry.queueType}-${entry.tier}-${entry.rank}`}>
-                        <div>
-                          <strong>{formatQueueLabel(entry.queueType)}</strong>
-                          <p>
-                            {entry.tier} {entry.rank} · {entry.leaguePoints} LP
-                          </p>
-                        </div>
-                        <div className="league-record">
-                          <span>
-                            {entry.wins}W / {entry.losses}L
-                          </span>
-                          <small>{entry.winRate}% WR</small>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="empty-state">
-                    Play ranked games to populate league insights.
-                  </p>
-                )}
-              </article>
-
-              <article className="insight-card status-log-card">
-                <header className="insight-card__header">
-                  <h3>Incident log</h3>
-                  <span>Latest messages from status-v4</span>
-                </header>
-                {incidents.length === 0 && maintenances.length === 0 ? (
-                  <p className="empty-state">
-                    No incidents or maintenances reported.
-                  </p>
-                ) : (
-                  <div className="status-log">
-                    {incidents.length > 0 && (
-                      <div>
-                        <h4>Incidents</h4>
-                        <ul className="status-log__list">
-                          {incidents.map((incident) => (
-                            <li key={incident.id}>
-                              <strong>{incident.title || incident.id}</strong>
-                              <p>{incident.message || "No message provided."}</p>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {maintenances.length > 0 && (
-                      <div>
-                        <h4>Maintenances</h4>
-                        <ul className="status-log__list">
-                          {maintenances.map((maintenance) => (
-                            <li key={maintenance.id}>
-                              <strong>
-                                {maintenance.title || maintenance.id}
-                              </strong>
-                              <p>
-                                {maintenance.message || "No message provided."}
-                              </p>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </article>
-
               <aside className="share-card">
                 <div>
                   <h2>Share your recap</h2>
@@ -1321,45 +1225,6 @@ function App() {
                 </div>
               </aside>
 
-              <div className="matches">
-                <div className="matches__header">
-                  <h2>Live match IDs</h2>
-                  {summonerLabel && (
-                    <p className="matches__meta">
-                      Pulled from match-v5 for{" "}
-                      <strong>{summonerLabel}</strong>
-                    </p>
-                  )}
-                </div>
-
-                {matches.length > 0 ? (
-                  <ul className="matches__grid">
-                    {matches.map((matchId, index) => (
-                      <li key={matchId} className="match-card">
-                        <div className="match-card__content">
-                          <span className="match-card__index">#{index + 1}</span>
-                          <p className="match-card__id">{matchId}</p>
-                        </div>
-                        <button
-                          type="button"
-                          className="match-card__action"
-                          onClick={() => handleCopy(matchId)}
-                        >
-                          Copy ID
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="empty-state">
-                    Fetch matches to populate live IDs from the Riot API.
-                  </p>
-                )}
-
-                {copyFeedback && (
-                  <div className="alert alert--success">{copyFeedback}</div>
-                )}
-              </div>
             </section>
           )}
         </div>
