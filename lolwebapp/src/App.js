@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
-import introImage from "./assets/1568742297124374.jpeg";
 
 const REGION_OPTIONS = [
   { value: "ASIA", label: "Asia", description: "KR, JP, OCE, PH, SG" },
@@ -68,6 +67,13 @@ ${standoutMoments}
 Keep the energy high, queue up, and let the next chapter drop. 🎶🗡️`;
 };
 
+const getChampionSigil = (championName = "") => {
+  if (!championName) return "LOL";
+  const cleaned = championName.replace(/[^a-zA-Z]/g, "");
+  if (!cleaned) return "LOL";
+  return cleaned.slice(0, 3).toUpperCase();
+};
+
 const copyTextToClipboard = async (text) => {
   try {
     if (
@@ -103,7 +109,7 @@ function App() {
   const [region, setRegion] = useState(REGION_OPTIONS[0].value);
   const [view, setView] = useState("form");
   const [recapData, setRecapData] = useState(null);
-  const [showIntro, setShowIntro] = useState(true);
+  const [introStage, setIntroStage] = useState("enter");
   const [animateApp, setAnimateApp] = useState(false);
   const [shareFeedback, setShareFeedback] = useState("");
   const [recapNarrative, setRecapNarrative] = useState("");
@@ -114,13 +120,17 @@ function App() {
   const [error, setError] = useState(null);
   const [copyFeedback, setCopyFeedback] = useState("");
   const copyTimeoutRef = useRef(null);
-
   useEffect(() => {
-    const introTimer = setTimeout(() => {
-      setShowIntro(false);
+    const fadeTimer = setTimeout(() => setIntroStage("exit"), 2200);
+    const endTimer = setTimeout(() => {
+      setIntroStage("hidden");
       setAnimateApp(true);
-    }, 3000);
-    return () => clearTimeout(introTimer);
+    }, 3600);
+
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(endTimer);
+    };
   }, []);
 
   useEffect(() => {
@@ -178,6 +188,26 @@ function App() {
   const highlightEntries = recapData?.highlightMoments || [];
   const playstyleTags = recapData?.playstyleTags || [];
   const primaryHighlight = highlightEntries[0];
+  const topChampion = matchHistoryEntries[0]?.champion;
+  const featuredRoles = useMemo(() => {
+    const roles = matchHistoryEntries
+      .map((match) => match.role)
+      .filter((role) => typeof role === "string" && role.trim().length > 0);
+    return Array.from(new Set(roles));
+  }, [matchHistoryEntries]);
+  const runeFocusLabel = useMemo(() => {
+    const focus = playstyleTags.slice(0, 3);
+    if (!focus.length) return "Awaiting scouting report";
+    return focus.join(" · ");
+  }, [playstyleTags]);
+  const crestHue = useMemo(() => {
+    if (!topChampion) return 218;
+    const base = topChampion
+      .split("")
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return base % 360;
+  }, [topChampion]);
+  const storyBackdropStyle = { "--story-hue": crestHue };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -344,19 +374,34 @@ function App() {
     copyTimeoutRef.current = setTimeout(() => setCopyFeedback(""), 2000);
   };
 
+  const introVisible = introStage !== "hidden";
+
   return (
     <div className="app-shell">
-      {showIntro && (
-        <div className="intro-screen">
-          <img
-            className="intro-screen__image"
-            src={introImage}
-            alt="Loading splash art"
-          />
+      {introVisible && (
+        <div className={`intro-screen intro-screen--${introStage}`}>
+          <div className="intro-screen__backdrop">
+            <span className="intro-screen__sigil intro-screen__sigil--outer" />
+            <span className="intro-screen__sigil intro-screen__sigil--inner" />
+            <span className="intro-screen__glyph intro-screen__glyph--left" />
+            <span className="intro-screen__glyph intro-screen__glyph--right" />
+          </div>
+          <div className="intro-screen__overlay">
+            <span className="intro-screen__tag">Summoner's Uplink</span>
+            <h1 className="intro-screen__headline">LOL Forge</h1>
+            <p className="intro-screen__subtitle">
+              Syncing Hextech telemetry from across Runeterra…
+            </p>
+            <div className="intro-screen__motif">
+              <span>Patch uplink stable</span>
+              <span>Rift climate nominal</span>
+              <span>Champions standing by</span>
+            </div>
+          </div>
         </div>
       )}
 
-      {!showIntro && (
+      {!introVisible && (
         <div className={`app ${animateApp ? "app--enter" : ""}`}>
           {view === "form" ? (
             <main className="card card--compact">
@@ -367,6 +412,13 @@ function App() {
                   experience while the live data pipeline is under
                   construction.
                 </p>
+                <div className="summoner-hints">
+                  <span className="summoner-hints__pill">Patch 14.9 calibration</span>
+                  <span className="summoner-hints__pill">Queues: Solo/Duo · Flex</span>
+                  <span className="summoner-hints__pill">
+                    Roles tracked: Top · Jungle · Mid · Bot · Support
+                  </span>
+                </div>
               </div>
 
               <form className="form" onSubmit={handleSubmit}>
@@ -480,12 +532,38 @@ function App() {
               </article>
 
               <div className="recap__banner">
-                <div>
+                <div className="recap__summary">
                   <p className="recap__eyebrow">Personalized recap</p>
                   <h1 className="recap__title">{recapData.summoner}</h1>
                   <p className="recap__meta">
                     {recapData.regionLabel} · Last {recapData.lastGamesCount} games
                   </p>
+                  <div className="recap__chips">
+                    <span className="recap__chip">{winRate}% win rate</span>
+                    <span className="recap__chip">{kdaRatio}:1 KDA</span>
+                    {topChampion && (
+                      <span className="recap__chip recap__chip--accent">
+                        Signature: {topChampion}
+                      </span>
+                    )}
+                  </div>
+                  <div className="recap__status-strip">
+                    <span>
+                      Featured lanes: {featuredRoles.length
+                        ? featuredRoles.join(" • ")
+                        : "Calibrating"}
+                    </span>
+                    <span>Rune focus: {runeFocusLabel}</span>
+                  </div>
+                </div>
+                <div className="recap__crest" style={storyBackdropStyle}>
+                  <div className="recap__crest-ring" aria-hidden="true">
+                    <span>{getChampionSigil(topChampion)}</span>
+                  </div>
+                  <div className="recap__crest-meta">
+                    <span>Signature pick</span>
+                    <strong>{topChampion || "Calibrating pool"}</strong>
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -497,7 +575,7 @@ function App() {
               </div>
 
               <div className="story">
-                <div className="story__frame">
+                <div className="story__frame" style={storyBackdropStyle}>
                   <div className="story__header">
                     <span className="story__badge">LOL Forge</span>
                     <span className="story__season">
@@ -660,9 +738,17 @@ function App() {
                             <span className="history-item__id">{match.id}</span>
                           </div>
                           <div className="history-item__row">
-                            <span className="history-item__champion">
-                              {match.champion} · {match.role}
-                            </span>
+                            <div className="history-item__champion">
+                              <div className="history-item__sigil" aria-hidden="true">
+                                {getChampionSigil(match.champion)}
+                              </div>
+                              <div className="history-item__champion-copy">
+                                <span className="history-item__champion-name">
+                                  {match.champion}
+                                </span>
+                                <span className="history-item__role">{match.role}</span>
+                              </div>
+                            </div>
                             <span className="history-item__kda">
                               {match.kda} KDA
                             </span>
