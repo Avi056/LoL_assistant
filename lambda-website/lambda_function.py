@@ -14,6 +14,8 @@ except ImportError:  # pragma: no cover - lambda environment provides boto3
     boto3 = None
     BotoCoreError = ClientError = Exception
 
+print("boto3 version:", boto3.__version__)
+
 # --- Environment variables ---
 RIOT_API_KEY = os.environ.get("RIOT_API_KEY")
 CUSTOM_API_KEY = os.environ.get("CUSTOM_API_KEY")
