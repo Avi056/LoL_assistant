@@ -949,18 +949,18 @@ function App() {
             <section className="recap">
               <article className="ai-card ai-card--top">
                 <header className="ai-card__header">
-                  <h2>AI&apos;s friendly suggestions to improve your gameplay :)</h2>
+                  <h2>Generate Feedback (only for those with tough skin)</h2>
                   <p>
                     Tap the button to let Claude 3.5 Haiku on Amazon Bedrock
                     roast your stats and drop constructive advice based on the
-                    live Riot data below.
+                    live Riot API data.
                   </p>
                 </header>
                 <textarea
                   className="ai-card__textarea"
                   rows={8}
                   value={recapNarrative}
-                  placeholder="Tap Generate Feedback to summon a spicy-yet-helpful roast from Claude."
+                  placeholder="Prepare your eyeballs..."
                   readOnly
                 />
                 <div className="ai-card__actions">
