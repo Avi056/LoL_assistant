@@ -618,6 +618,8 @@ def _generate_ai_feedback(stats_context: Dict[str, Any]) -> Dict[str, Any]:
             "Roast me very very hard. Brutal and savage. Include insanely obscure and funny metaphors"
             "Make it around 15 sentences in one format and tone. Short and sweet, no intro just straight roasting."
             "All stats do not need to be covered. Emphasize one-tricking. Put in emojis or emoticons."
+            "Write the output like you are giving it to the player directly"
+            "Obscure and devious metaphors"
             "\n\n"
             f"Stats JSON:\n{stats_json}"
         )
