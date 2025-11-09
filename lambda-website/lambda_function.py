@@ -539,49 +539,42 @@ def _build_ai_stats_context(
 
 
 def _get_bedrock_client():
+    """Return or initialize a Bedrock client using boto3."""
     global _bedrock_client
     if _bedrock_client is None and ENABLE_BEDROCK and boto3:
-        _bedrock_client = boto3.client("bedrock-runtime", region_name=BEDROCK_REGION)
+        _bedrock_client = boto3.client(
+            service_name="bedrock-runtime",
+            region_name=BEDROCK_REGION,
+        )
     return _bedrock_client
 
 
 def _render_bedrock_content(response_json: Dict[str, Any]) -> str:
-    # Handle multiple possible response formats from Bedrock Claude models
-    content = (
-        response_json.get("content")
-        or response_json.get("output")
-        or response_json.get("completion")
-        or []
-    )
+    """Extract text output from various Bedrock/Anthropic model formats."""
+    # New Claude format (v2024+)
+    if isinstance(response_json, dict):
+        if "content" in response_json and isinstance(response_json["content"], list):
+            parts = []
+            for item in response_json["content"]:
+                if isinstance(item, dict) and "text" in item:
+                    parts.append(item["text"])
+            if parts:
+                return "".join(parts).strip()
 
-    # If it's already a string
-    if isinstance(content, str):
-        return content.strip()
+        # Older Anthropic or fallback
+        if "output_text" in response_json:
+            return response_json["output_text"].strip()
+        if "completion" in response_json:
+            return response_json["completion"].strip()
+        if "message" in response_json:
+            return str(response_json["message"]).strip()
 
-    # If it's a list of dicts
-    if isinstance(content, list):
-        parts = []
-        for item in content:
-            if isinstance(item, dict):
-                # Handle both new and old formats
-                text = (
-                    item.get("text")
-                    or item.get("content")
-                    or item.get("message")
-                    or ""
-                )
-                parts.append(str(text))
-        if parts:
-            return "".join(parts).strip()
-
-    # Handle Anthropic "message" schema (rare but possible)
-    if "message" in response_json:
-        return str(response_json["message"]).strip()
-
-    return ""
+    # Default fallback
+    return str(response_json).strip()
 
 
 def _generate_ai_feedback(stats_context: Dict[str, Any]) -> Dict[str, Any]:
+    """Generate AI feedback using Amazon Bedrock + Anthropic Claude."""
     if not ENABLE_BEDROCK:
         return {
             "message": "",
@@ -592,7 +585,7 @@ def _generate_ai_feedback(stats_context: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "message": "",
             "modelId": BEDROCK_MODEL_ID,
-            "error": "boto3 is not available in the current environment.",
+            "error": "boto3 not available in environment.",
         }
     if not stats_context:
         return {
@@ -602,71 +595,61 @@ def _generate_ai_feedback(stats_context: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     try:
-        client = _get_bedrock_client()
-    except Exception as exc:  # pragma: no cover - defensive
-        return {
-            "message": "",
-            "modelId": BEDROCK_MODEL_ID,
-            "error": f"Failed to initialize Bedrock client: {exc}",
+        bedrock = _get_bedrock_client()
+        if bedrock is None:
+            raise RuntimeError("Unable to initialize Bedrock client.")
+
+        # Build Anthropic-style prompt
+        stats_json = json.dumps(stats_context, ensure_ascii=False, indent=2)
+        prompt = (
+            "I'm going to give you some League of Legends stats. "
+            "Give me a short roast like penguinz0 but constructive, two paragraphs max. "
+            "Don't cover every stat — make it flow, fun, and not offensive.\n\n"
+            f"Stats JSON:\n{stats_json}"
+        )
+
+        body = {
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 600,
+            "temperature": 0.6,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [{"type": "text", "text": prompt}],
+                }
+            ],
         }
 
-    if client is None:
-        return {
-            "message": "",
-            "modelId": BEDROCK_MODEL_ID,
-            "error": "Unable to initialize Bedrock client.",
-        }
-
-    stats_json = json.dumps(stats_context, ensure_ascii=False, indent=2)
-    prompt = (
-        "I'm going to give you some LoL stats and I want you to give me constructive"
-        " feedback but also roast me really hard like penguinz0. Make it only two"
-        " paragraphs at most all in one tone. Short and sweet, all stats do not need"
-        " to be covered. Make it flow and do not offend any groups. Here is a JSON"
-        " of stats to roast and provide a little feedback on:\n"
-        f"{stats_json}"
-    )
-
-    body = {
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 600,
-        "temperature": 0.6,
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": prompt,
-                    }
-                ],
-            }
-        ],
-    }
-
-    try:
-        response = client.invoke_model(
+        response = bedrock.invoke_model(
             modelId=BEDROCK_MODEL_ID,
             contentType="application/json",
             accept="application/json",
-            body=json.dumps(body).encode("utf-8"),
+            body=json.dumps(body),
         )
-        payload = json.loads(response["body"].read())
+
+        # ✅ FIXED: read response correctly like your working example
+        raw_body = response.get("body")
+        if hasattr(raw_body, "read"):
+            raw_body = raw_body.read()
+        payload = json.loads(raw_body)
+
         message = _render_bedrock_content(payload)
         if not message:
-            message = payload.get("output_text") or ""
+            message = payload.get("output_text", "")
+
         return {
             "message": message.strip(),
             "modelId": BEDROCK_MODEL_ID,
             "error": None,
         }
-    except (BotoCoreError, ClientError) as bedrock_error:
+
+    except (BotoCoreError, ClientError) as err:
         return {
             "message": "",
             "modelId": BEDROCK_MODEL_ID,
-            "error": str(bedrock_error),
+            "error": str(err),
         }
-    except Exception as exc:  # pragma: no cover - defensive
+    except Exception as exc:
         return {
             "message": "",
             "modelId": BEDROCK_MODEL_ID,

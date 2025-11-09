@@ -1,38 +1,45 @@
 import boto3
 import json
 
-REGION = "us-east-1"
-MODEL_ID = "anthropic.claude-haiku-4-5-20251001-v1:0"
-# MODEL_ID = "meta.llama4-maverick-17b-instruct-v1:0"
+# Set up the Amazon Bedrock client
+bedrock_client = boto3.client(
+    service_name="bedrock-runtime",
+    region_name="us-east-1"
+)
 
-# Use the runtime client
-client = boto3.client("bedrock-runtime", region_name=REGION)
+# Define the model ID
+model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
 
-prompt = "Write a short poem about a dragon learning to code in Python."
+# Prepare the input prompt
+prompt = "Hello, how are you?"
 
-body = {
-    "inputText": prompt,
-    "maxTokensToSample": 100,
-    "temperature": 0.7
+# Create the request payload
+payload = {
+    "anthropic_version": "bedrock-2023-05-31",
+    "max_tokens": 2048,
+    "temperature": 0.9,
+    "top_k": 250,
+    "top_p": 1,
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": prompt
+                }
+            ]
+        }
+    ]
 }
 
-try:
-    response = client.invoke_model(
-        modelId=MODEL_ID,
-        body=json.dumps(body),
-        contentType="application/json",
-        accept="application/json"
-    )
+# Invoke the Amazon Bedrock model
+response = bedrock_client.invoke_model(
+    modelId=model_id,
+    body=json.dumps(payload)
+)
 
-    # Claude returns a 'content' list
-    response_json = json.loads(response["body"].read())
-    generated_text = ""
-    for item in response_json.get("content", []):
-        if item.get("type") == "text":
-            generated_text += item.get("text", "")
-
-    print("=== Generated Output ===")
-    print(generated_text)
-
-except Exception as e:
-    print("Error calling Bedrock:", e)
+# Process the response
+result = json.loads(response["body"].read())
+generated_text = "".join([output["text"] for output in result["content"]])
+print(f"Response: {generated_text}")
