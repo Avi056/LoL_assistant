@@ -657,19 +657,19 @@ AI_FEEDBACK_TONE_PROMPTS = {
         "Given the JSON of League of Legends stats, provide direct yet constructive coaching."
         " Balance praise with critique, outline the biggest leaks in their gameplay, and give actionable fixes."
         " Keep the tone like an esports analyst who wants them to improve fast."
-        " Respond in two paragraphs."
+        " Respond in a list of bullet points."
     ),
     "hype": (
         "Given the JSON of League of Legends stats, respond like an over-the-top hype caster."
         " Celebrate every decent metric, reframe flaws as comeback fuel, and keep the compliments flowing."
         " Use energetic language, callbacks to pro-play moments, and leave them confident."
-        " Two paragraphs max."
+        " Two paragraphs max. All caps. Crazy wild."
     ),
     "friend": (
         "Given the JSON of League of Legends stats, respond like a supportive friend after a tough ranked session."
         " Be empathetic, encouraging, and gently honest about improvements."
         " Highlight one or two actionable tips but keep the priority on emotional support and motivation."
-        " Two paragraphs, conversational tone."
+        " Two paragraphs, conversational tone. Genuine and kind."
     ),
 }
 

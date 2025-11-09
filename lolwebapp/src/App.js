@@ -667,6 +667,7 @@ function App() {
   const [feedbackTone, setFeedbackTone] = useState(
     FEEDBACK_TONE_OPTIONS[0].value
   );
+  const feedbackToneRef = useRef(FEEDBACK_TONE_OPTIONS[0].value);
   const [activeAudio, setActiveAudio] = useState("intro");
   const [audioReady, setAudioReady] = useState(false);
   const introDelayTimeoutRef = useRef(null);
@@ -1163,10 +1164,11 @@ function App() {
     console.log("🧠 Generating recap...");
     console.log("📊 Sending stats to backend:", aiStatsRef.current);
 
-    const toneKey =
-      selectedFeedbackTone?.value ||
-      feedbackTone ||
-      FEEDBACK_TONE_OPTIONS[0].value;
+    // const toneKey =
+    //   selectedFeedbackTone?.value ||
+    //   feedbackTone ||
+    //   FEEDBACK_TONE_OPTIONS[0].value;
+    const toneKey = feedbackToneRef.current || FEEDBACK_TONE_OPTIONS[0].value;
     console.log("🎛️ Selected feedback tone:", toneKey);
 
     try {
@@ -1334,7 +1336,11 @@ function App() {
                     <select
                       id="feedback-tone"
                       value={feedbackTone}
-                      onChange={(event) => setFeedbackTone(event.target.value)}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setFeedbackTone(value);
+                        feedbackToneRef.current = value; // keep latest tone for instant reads
+                      }}
                       disabled={isGeneratingRecap}
                     >
                       {FEEDBACK_TONE_OPTIONS.map((tone) => (
