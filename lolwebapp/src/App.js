@@ -315,12 +315,12 @@ const buildIdentityShareImage = ({
 
   ctx.fillStyle = "rgba(148, 163, 184, 0.9)";
   ctx.font = "500 28px 'Poppins', sans-serif";
-  ctx.fillText(`Region · ${regionLabel}`, 110, size - 180);
+  ctx.fillText(`Region · ${regionLabel}`, 110, size - 200);
   ctx.font = "500 28px 'Poppins', sans-serif";
-  ctx.fillText(`Trend focus · ${trendFocus}`, 110, size - 130);
+  ctx.fillText(`Trend focus · ${trendFocus}`, 110, size - 150);
 
   ctx.font = "400 24px 'Poppins', sans-serif";
-  ctx.fillText("Share your recap at riot-rift.com", 110, size - 80);
+  ctx.fillText("Share your recap at riot-rift.com", 110, size - 100);
 
   return canvas.toDataURL("image/png");
 };
