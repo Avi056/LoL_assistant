@@ -673,6 +673,38 @@ AI_FEEDBACK_TONE_PROMPTS = {
     ),
 }
 
+def _normalize_prompt_style(raw_style: Optional[str]) -> str:
+    """
+    Normalize any incoming style/label into:
+    'roast', 'constructive', 'hype', or 'friend'.
+    Defaults to 'roast' for unknown input.
+    """
+    if raw_style is None:
+        return DEFAULT_FEEDBACK_TONE
+
+    key = str(raw_style).strip().lower()
+
+    mapping = {
+        # roast
+        "roast": "roast",
+        "get roasted": "roast",
+
+        # constructive
+        "constructive": "constructive",
+        "constructive feedback": "constructive",
+
+        # hype
+        "hype": "hype",
+        "hype man": "hype",
+
+        # friend
+        "friend": "friend",
+        "i need a friend": "friend",
+    }
+
+    return mapping.get(key, DEFAULT_FEEDBACK_TONE)
+
+
 def _generate_ai_feedback(stats_context: Dict[str, Any], prompt_style: Optional[str] = None) -> Dict[str, Any]:
     """Generate AI feedback using Amazon Bedrock (supports Anthropic + AI21)."""
 
@@ -698,11 +730,9 @@ def _generate_ai_feedback(stats_context: Dict[str, Any], prompt_style: Optional[
         print("✅ Bedrock client initialized successfully.")
 
         # Normalize and validate tone
-        raw_tone = (prompt_style or DEFAULT_FEEDBACK_TONE)
-        tone_key = str(raw_tone).strip().lower()
-        if tone_key not in AI_FEEDBACK_TONE_PROMPTS:
-            print(f"⚠️ Unknown tone '{tone_key}', falling back to default '{DEFAULT_FEEDBACK_TONE}'")
-            tone_key = DEFAULT_FEEDBACK_TONE
+        tone_key = _normalize_prompt_style(prompt_style)
+        print("🎯 Normalized tone_key:", tone_key)
+        
 
         instructions = AI_FEEDBACK_TONE_PROMPTS[tone_key]
         print("🎯 Using tone_key:", tone_key)
