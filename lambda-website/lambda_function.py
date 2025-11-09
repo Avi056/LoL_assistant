@@ -45,7 +45,7 @@ ALLOWED_ORIGINS = [o.strip() for o in _RAW_ALLOWED_ORIGINS.split(",") if o.strip
 
 ENABLE_BEDROCK = (os.environ.get("ENABLE_BEDROCK", "true").lower() not in {"0", "false", "no"})
 BEDROCK_MODEL_ID = os.environ.get(
-    "BEDROCK_MODEL_ID", "anthropic.claude-3-5-haiku-20241022-v1:0"
+    "BEDROCK_MODEL_ID", "anthropic.claude-3-haiku-20240307-v1:0"
 )
 BEDROCK_REGION = os.environ.get("BEDROCK_REGION", os.environ.get("AWS_REGION", "us-east-1"))
 
@@ -615,9 +615,9 @@ def _generate_ai_feedback(stats_context: Dict[str, Any]) -> Dict[str, Any]:
         stats_json = json.dumps(stats_context, ensure_ascii=False, indent=2)
         prompt = (
             "I am going to give you some LoL stats in JSON format."
-            "Roast me very very hard like penguinz0. Brutal and savage."
+            "Roast me very very hard. Brutal and savage. Include insanely obscure and funny metaphors"
             "Make it around 15 sentences in one format and tone. Short and sweet, no intro just straight roasting."
-            "All stats do not need to be covered. Emphasize one-tricking and spamming one role. Put in emojis or emoticons."
+            "All stats do not need to be covered. Emphasize one-tricking. Put in emojis or emoticons."
             "\n\n"
             f"Stats JSON:\n{stats_json}"
         )
