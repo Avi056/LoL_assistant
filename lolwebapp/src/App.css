@@ -13,7 +13,7 @@
   --error: #f87171;
   --success: #34d399;
   --shadow: 0 24px 60px -30px rgba(124, 58, 237, 0.7);
-  --history-item-height: 150px;
+  --history-item-height: 350px;
   --history-item-gap: 20px;
 }
 
