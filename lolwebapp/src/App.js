@@ -119,7 +119,7 @@ const buildShareSummary = (recap, winRate, kdaRatio) => {
     : "Queue up to log fresh wins.";
 
   return [
-    `Here's my League of Legends Recap! Take a look:`
+    `Here's my League of Legends Recap! Take a look:`,
     `🎮 ${recap.summoner}'s Recap`,
     `🏆 ${wins}W / ${losses}L (${winRate.toFixed(1)}% WR)`,
     `💀 ${kdaRatio.toFixed(2)} KDA · ${recap.kda.csPerMin} CS/min · ${recap.kda.goldPerMin} GPM`,
@@ -127,7 +127,7 @@ const buildShareSummary = (recap, winRate, kdaRatio) => {
     `🤩 Highlight: ${signaturePlay}`,
     "",
     "📡 Every stat is sourced directly from Riot APIs.",
-    `Check yours: ${APP_SHARE_URL}`,
+    `Check yours: ${APP_SHARE_URL}`
   ].join("\n");
 };
 
