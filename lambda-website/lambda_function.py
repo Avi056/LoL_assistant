@@ -765,7 +765,7 @@ def lambda_handler(event, context):
 
         if body.get("mode") == "ai-feedback":
             stats_context = body.get("stats") or {}
-            prompt_style = body.get("promptStyle")
+            prompt_style = body.get("promptStyle") or body.get("prompt_style")
             ai_feedback = _generate_ai_feedback(stats_context, prompt_style)
             return _build_response(event, 200, {"aiFeedback": ai_feedback})
 
