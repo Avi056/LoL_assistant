@@ -1470,7 +1470,7 @@ body {
 
 .history-list {
   gap: var(--history-item-gap);
-  max-height: calc(3 * var(--history-item-height) + 4 * var(--history-item-gap));
+  max-height: calc(2 * var(--history-item-height) + 4 * var(--history-item-gap));
   overflow-y: auto;
   padding-right: 4px;
   scrollbar-width: thin;
