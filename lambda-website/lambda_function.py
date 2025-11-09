@@ -7,6 +7,13 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 
+try:  # pragma: no cover - optional dependency in local dev
+    import boto3
+    from botocore.exceptions import BotoCoreError, ClientError
+except ImportError:  # pragma: no cover - lambda environment provides boto3
+    boto3 = None
+    BotoCoreError = ClientError = Exception
+
 # --- Environment variables ---
 RIOT_API_KEY = os.environ.get("RIOT_API_KEY")
 CUSTOM_API_KEY = os.environ.get("CUSTOM_API_KEY")
@@ -23,6 +30,14 @@ DEFAULT_PLATFORM_BY_REGION = {
 
 _RAW_ALLOWED_ORIGINS = (os.environ.get("ALLOWED_ORIGINS") or "").strip()
 ALLOWED_ORIGINS = [o.strip() for o in _RAW_ALLOWED_ORIGINS.split(",") if o.strip()]
+
+ENABLE_BEDROCK = (os.environ.get("ENABLE_BEDROCK", "true").lower() not in {"0", "false", "no"})
+BEDROCK_MODEL_ID = os.environ.get(
+    "BEDROCK_MODEL_ID", "anthropic.claude-3-sonnet-20240229-v1:0"
+)
+BEDROCK_REGION = os.environ.get("BEDROCK_REGION", os.environ.get("AWS_REGION", "us-east-1"))
+
+_bedrock_client: Optional["boto3.client"] = None
 
 
 # ---------- CORS helpers ----------
@@ -493,6 +508,136 @@ def _build_advanced_metrics(matches: List[Dict[str, Any]]) -> Dict[str, Any]:
     }
 
 
+def _build_ai_stats_context(
+    recap_payload: Dict[str, Any],
+    profile_payload: Optional[Dict[str, Any]],
+    league_payload: List[Dict[str, Any]],
+    platform_payload: Optional[Dict[str, Any]],
+    advanced_metrics: Optional[Dict[str, Any]],
+    matches: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    return {
+        "recap": recap_payload,
+        "profile": profile_payload,
+        "leagueSummary": league_payload,
+        "platformStatus": platform_payload,
+        "advancedMetrics": advanced_metrics,
+        "matches": matches,
+    }
+
+
+def _get_bedrock_client():
+    global _bedrock_client
+    if _bedrock_client is None and ENABLE_BEDROCK and boto3:
+        _bedrock_client = boto3.client("bedrock-runtime", region_name=BEDROCK_REGION)
+    return _bedrock_client
+
+
+def _render_bedrock_content(response_json: Dict[str, Any]) -> str:
+    content = response_json.get("content") or []
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, dict) and item.get("type") == "text":
+                parts.append(item.get("text") or "")
+        if parts:
+            return "".join(parts).strip()
+    return ""
+
+
+def _generate_ai_feedback(stats_context: Dict[str, Any]) -> Dict[str, Any]:
+    if not ENABLE_BEDROCK:
+        return {
+            "message": "",
+            "modelId": None,
+            "error": "Amazon Bedrock integration disabled.",
+        }
+    if not boto3:
+        return {
+            "message": "",
+            "modelId": BEDROCK_MODEL_ID,
+            "error": "boto3 is not available in the current environment.",
+        }
+    if not stats_context:
+        return {
+            "message": "",
+            "modelId": BEDROCK_MODEL_ID,
+            "error": "No stats provided for AI feedback.",
+        }
+
+    try:
+        client = _get_bedrock_client()
+    except Exception as exc:  # pragma: no cover - defensive
+        return {
+            "message": "",
+            "modelId": BEDROCK_MODEL_ID,
+            "error": f"Failed to initialize Bedrock client: {exc}",
+        }
+
+    if client is None:
+        return {
+            "message": "",
+            "modelId": BEDROCK_MODEL_ID,
+            "error": "Unable to initialize Bedrock client.",
+        }
+
+    stats_json = json.dumps(stats_context, ensure_ascii=False, indent=2)
+    prompt = (
+        "I'm going to give you some LoL stats and I want you to give me constructive"
+        " feedback but also roast me really hard like penguinz0. Make it only two"
+        " paragraphs at most all in one tone. Short and sweet, all stats do not need"
+        " to be covered. Make it flow and do not offend any groups. Here is a JSON"
+        " of stats to roast and provide a little feedback on:\n"
+        f"{stats_json}"
+    )
+
+    body = {
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": 2048,
+        "temperature": 0.9,
+        "top_k": 250,
+        "top_p": 1,
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": prompt,
+                    }
+                ],
+            }
+        ],
+    }
+
+    try:
+        response = client.invoke_model(
+            modelId=BEDROCK_MODEL_ID,
+            body=json.dumps(body),
+        )
+        payload = json.loads(response["body"].read())
+        message = _render_bedrock_content(payload)
+        if not message:
+            message = payload.get("output_text") or ""
+        return {
+            "message": message.strip(),
+            "modelId": BEDROCK_MODEL_ID,
+            "error": None,
+        }
+    except (BotoCoreError, ClientError) as bedrock_error:
+        return {
+            "message": "",
+            "modelId": BEDROCK_MODEL_ID,
+            "error": str(bedrock_error),
+        }
+    except Exception as exc:  # pragma: no cover - defensive
+        return {
+            "message": "",
+            "modelId": BEDROCK_MODEL_ID,
+            "error": str(exc),
+        }
+
+
 # ---------- Lambda entry ----------
 def lambda_handler(event, context):
     method = (
@@ -517,6 +662,11 @@ def lambda_handler(event, context):
             raw_body = base64.b64decode(raw_body).decode("utf-8")
 
         body = json.loads(raw_body or "{}")
+
+        if body.get("mode") == "ai-feedback":
+            stats_context = body.get("stats") or {}
+            ai_feedback = _generate_ai_feedback(stats_context)
+            return _build_response(event, 200, {"aiFeedback": ai_feedback})
 
         game_name = (body.get("game_name") or "").strip() or "Faker"
         tag_line = (body.get("tag_line") or "").strip() or "KR1"
@@ -622,6 +772,16 @@ def lambda_handler(event, context):
         )
         advanced_metrics = _build_advanced_metrics(detailed_entries)
 
+        stats_context = _build_ai_stats_context(
+            recap_payload,
+            profile_payload,
+            league_payload,
+            platform_payload,
+            advanced_metrics,
+            detailed_entries,
+        )
+        ai_feedback = _generate_ai_feedback(stats_context)
+
         return _build_response(
             event,
             200,
@@ -634,6 +794,8 @@ def lambda_handler(event, context):
                 "leagueSummary": league_payload,
                 "platformStatus": platform_payload,
                 "advancedMetrics": advanced_metrics,
+                "aiFeedback": ai_feedback,
+                "aiStatsContext": stats_context,
             },
         )
 
