@@ -1579,6 +1579,16 @@ body {
   align-items: flex-start;
 }
 
+.history-item__roast {
+  margin: 6px 0 0;
+  padding-left: 14px;
+  border-left: 2px solid rgba(236, 72, 153, 0.45);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: rgba(248, 250, 252, 0.82);
+  font-style: italic;
+}
+
 .history-item__badge {
   padding: 6px 14px;
   border-radius: 999px;
