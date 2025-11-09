@@ -156,6 +156,85 @@ ${standoutMoments || "• Pull fresh data to unlock highlight descriptions."}
 Live telemetry from Riot endpoints keeps the receipts. Queue up and write the next chapter. 🗡️`;
 };
 
+const LOSS_ROAST_TEMPLATES = [
+  ({ champ, ratioLabel, role }) =>
+    `You piloted ${champ} like a Bronze ${role}. ${ratioLabel} is an inting masterclass.`,
+  ({ champ, ratioLabel }) =>
+    `${champ} with a ${ratioLabel} KDA? Even cannon minions felt the carry diff.`,
+  ({ champ }) =>
+    `That loss looked like ${champ} was on autopilot. Maybe try playing with your monitor on.`,
+];
+
+const LUCK_TAUNT_TEMPLATES = [
+  ({ champ, ratioLabel }) =>
+    `Enjoy that ${champ} win—${ratioLabel} screams pure luck, not skill.`,
+  ({ champ, ratioLabel }) =>
+    `${champ} only popped off because the matchmaking RNG blessed you. ${ratioLabel} isn't happening twice.`,
+  ({ champ }) =>
+    `Screenshot that win with ${champ} while you can; nobody believes it wasn't a bot lobby.`,
+];
+
+const BORING_WIN_TEMPLATES = [
+  ({ champ }) =>
+    `Team diff carried your ${champ}. Try contributing next queue.`,
+  ({ ratioLabel }) =>
+    `${ratioLabel} KDA and still invisible? The squad dragged you across the finish line.`,
+  () => `That victory was charity LP. Consider saying thank you to your randoms.`,
+];
+
+const sumCharCodes = (value = "") =>
+  Array.from(value).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+
+const parseKdaRatio = (kdaLabel) => {
+  if (!kdaLabel || typeof kdaLabel !== "string") return null;
+  const sanitized = kdaLabel.replace(/kda/i, "").trim();
+  const slashParts = sanitized.split("/").map((part) => part.trim());
+  if (slashParts.length === 3) {
+    const [kills, deaths, assists] = slashParts.map((part) => {
+      const numeric = parseFloat(part.replace(/[^\d.-]/g, ""));
+      return Number.isFinite(numeric) ? numeric : null;
+    });
+    if (
+      Number.isFinite(kills) &&
+      Number.isFinite(deaths) &&
+      Number.isFinite(assists)
+    ) {
+      return (kills + assists) / Math.max(1, deaths);
+    }
+  }
+  const numeric = parseFloat(sanitized.replace(/[^\d.-]/g, ""));
+  return Number.isFinite(numeric) ? numeric : null;
+};
+
+const getMatchTrashTalk = (match) => {
+  if (!match) return "";
+  const ratio = parseKdaRatio(match.kda);
+  const isWin = String(match.result || "").toLowerCase() === "win";
+  const ratioLabel = Number.isFinite(ratio) ? `${ratio.toFixed(1)}:1` : "???:1";
+  const champ = match.champion || "that pick";
+  const role = (match.role || "role").toLowerCase();
+  const seed =
+    sumCharCodes(match.id || "") +
+    sumCharCodes(champ) +
+    (Number.isFinite(ratio) ? Math.round(ratio * 10) : 0);
+  const pickTemplate = (templates) =>
+    templates[Math.abs(seed) % templates.length];
+
+  const context = { champ, ratioLabel, role };
+  const lowKda = Number.isFinite(ratio) ? ratio < 2.0 : false;
+  const goodGame = isWin && Number.isFinite(ratio) && ratio >= 3.2;
+
+  if (!isWin || lowKda) {
+    return pickTemplate(LOSS_ROAST_TEMPLATES)(context);
+  }
+
+  if (goodGame) {
+    return pickTemplate(LUCK_TAUNT_TEMPLATES)(context);
+  }
+
+  return pickTemplate(BORING_WIN_TEMPLATES)(context);
+};
+
 const copyTextToClipboard = async (text) => {
   try {
     if (
@@ -1380,6 +1459,7 @@ function App() {
                                   match.id &&
                                   match.id === bestHistoryMatchId
                               );
+                        const roastNote = getMatchTrashTalk(match);
                         return (
                           <li key={match.id} className="history-item">
                           <div className="history-item__top">
@@ -1416,6 +1496,9 @@ function App() {
                                 </span>
                               )}
                             </div>
+                          )}
+                          {roastNote && (
+                            <p className="history-item__roast">{roastNote}</p>
                           )}
                         </li>
                         );
