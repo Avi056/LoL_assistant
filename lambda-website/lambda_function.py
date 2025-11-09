@@ -614,9 +614,9 @@ def _generate_ai_feedback(stats_context: Dict[str, Any]) -> Dict[str, Any]:
         # Build prompt
         stats_json = json.dumps(stats_context, ensure_ascii=False, indent=2)
         prompt = (
-            "You are an assistant that analyzes League of Legends player stats. "
-            "Provide a short, funny, constructive 'roast' in 2 paragraphs. "
-            "Be witty but not mean.\n\n"
+            "I am going to give you some LoL stats in JSON format."
+            "Provide me some constructive feedback but mostly roast me very very hard like penguinz0. "
+            "Make it two paragraphs in one format and tone. Short and sweet. All stats do not need to be covered\n\n"
             f"Stats JSON:\n{stats_json}"
         )
 

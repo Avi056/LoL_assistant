@@ -992,7 +992,7 @@ function App() {
                 <header className="ai-card__header">
                   <h2>Generate Feedback (only for those with tough skin)</h2>
                   <p>
-                    Tap the button to let Claude 3.5 Haiku on Amazon Bedrock
+                    Tap the button to let Claude 3.5 Haiku on AWS Bedrock
                     roast your stats and drop constructive advice based on the
                     live Riot API data.
                   </p>
@@ -1103,7 +1103,7 @@ function App() {
                   <div className="identity-card__footer">
                     {lastActiveLabel && (
                       <span className="identity-card__activity">
-                        Last active · {lastActiveLabel}
+                        {/* Last active · {lastActiveLabel} */}
                       </span>
                     )}
                     {identityShareStatus && (
@@ -1223,7 +1223,7 @@ function App() {
                   <header className="stat-card__header">
                     <h2>Macro & vision</h2>
                     <span className="stat-card__sub">
-                      Data from match-v5 participant stats
+                      Data from participant statistics
                     </span>
                   </header>
                   <ul className="insight-list insight-list--two-col">
@@ -1407,7 +1407,7 @@ function App() {
               <article className="champion-card insight-card">
                 <header className="insight-card__header">
                   <h3>Champion & role mix</h3>
-                  <span>Top pulls from match-v5</span>
+                  {/* <span>Top pulls from match-v5</span> */}
                 </header>
                 <div className="champion-card__body">
                   <div className="champion-card__section">
