@@ -9,9 +9,13 @@ const buildPublicAssetUrl = (fileName) => {
 
 const INTRO_BACKGROUND_ASSET = "dark blue league of legends background.jpg";
 const LEAGUE_LOGO_ASSET = "League-of-Legends-Logo.png";
+const INTRO_AUDIO_ASSET = "intro.mp3";
+const STATS_AUDIO_ASSET = "stats.mp3";
 
 const introBackground = buildPublicAssetUrl(INTRO_BACKGROUND_ASSET);
 const leagueLogo = buildPublicAssetUrl(LEAGUE_LOGO_ASSET);
+const introAudioUrl = buildPublicAssetUrl(INTRO_AUDIO_ASSET);
+const statsAudioUrl = buildPublicAssetUrl(STATS_AUDIO_ASSET);
 const PIE_CHART_COLORS = [
   "#7c3aed",
   "#c084fc",
@@ -662,12 +666,45 @@ function App() {
   const [feedbackTone, setFeedbackTone] = useState(
     FEEDBACK_TONE_OPTIONS[0].value
   );
+  const [activeAudio, setActiveAudio] = useState("intro");
+  const [audioReady, setAudioReady] = useState(false);
   const introDelayTimeoutRef = useRef(null);
   const introHideTimeoutRef = useRef(null);
   const aiStatsRef = useRef(null);
   const riotIdRef = useRef(null);
   const introLogoRef = useRef(null);
   const logoFlightTriggeredRef = useRef(false);
+  const introAudioRef = useRef(null);
+  const statsAudioRef = useRef(null);
+  const audioUnlockHandlerRef = useRef(null);
+  const requestAudioPlayback = useCallback(
+    (audioInstance) => {
+      if (!audioInstance) return;
+
+      const tryPlay = () => {
+        const playAttempt = audioInstance.play();
+        if (playAttempt?.catch) {
+          playAttempt.catch(() => {
+            if (
+              typeof window === "undefined" ||
+              audioUnlockHandlerRef.current
+            ) {
+              return;
+            }
+            const unlock = () => {
+              audioUnlockHandlerRef.current = null;
+              tryPlay();
+            };
+            audioUnlockHandlerRef.current = unlock;
+            window.addEventListener("pointerdown", unlock, { once: true });
+          });
+        }
+      };
+
+      tryPlay();
+    },
+    []
+  );
 
   useEffect(() => {
     introDelayTimeoutRef.current = setTimeout(() => {
@@ -705,6 +742,45 @@ function App() {
     const timer = setTimeout(() => setIdentityShareStatus(""), 2600);
     return () => clearTimeout(timer);
   }, [identityShareStatus]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const introAudio = new Audio(introAudioUrl);
+    introAudio.loop = true;
+    introAudioRef.current = introAudio;
+
+    const statsAudio = new Audio(statsAudioUrl);
+    statsAudio.loop = true;
+    statsAudioRef.current = statsAudio;
+
+    setAudioReady(true);
+
+    return () => {
+      introAudio.pause();
+      statsAudio.pause();
+      if (typeof window !== "undefined" && audioUnlockHandlerRef.current) {
+        window.removeEventListener("pointerdown", audioUnlockHandlerRef.current);
+        audioUnlockHandlerRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!audioReady) return;
+    const activeRef =
+      activeAudio === "intro" ? introAudioRef.current : statsAudioRef.current;
+    const inactiveRef =
+      activeAudio === "intro" ? statsAudioRef.current : introAudioRef.current;
+
+    if (inactiveRef) {
+      inactiveRef.pause();
+      inactiveRef.currentTime = 0;
+    }
+
+    if (activeRef) {
+      requestAudioPlayback(activeRef);
+    }
+  }, [activeAudio, audioReady, requestAudioPlayback]);
 
   const animateLogoFlight = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -920,6 +996,9 @@ function App() {
     setRecapNarrative("");
     setAiError("");
     aiStatsRef.current = null;
+    if (activeAudio !== "stats") {
+      setActiveAudio("stats");
+    }
 
     try {
       const response = await fetch(API_URL, {
