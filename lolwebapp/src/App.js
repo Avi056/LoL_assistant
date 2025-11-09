@@ -119,13 +119,12 @@ const buildShareSummary = (recap, winRate, kdaRatio) => {
     : "Queue up to log fresh wins.";
 
   return [
-    `🎮 ${recap.summoner}'s Riot Rift Recap`,
-    `📊 ${wins}W / ${losses}L (${winRate.toFixed(1)}% WR)`,
-    `⚔️ ${kdaRatio.toFixed(2)} KDA · ${recap.kda.csPerMin} CS/min · ${recap.kda.goldPerMin} GPM`,
-    `🎯 Focus: ${recap.trendFocus}`,
-    `✨ Highlight: ${signaturePlay}`,
-    "",
-    `${matchLine}`,
+    `Here's my League of Legends Recap! Take a look:`
+    `🎮 ${recap.summoner}'s Recap`,
+    `🏆 ${wins}W / ${losses}L (${winRate.toFixed(1)}% WR)`,
+    `💀 ${kdaRatio.toFixed(2)} KDA · ${recap.kda.csPerMin} CS/min · ${recap.kda.goldPerMin} GPM`,
+    `🔍 Focus: ${recap.trendFocus}`,
+    `🤩 Highlight: ${signaturePlay}`,
     "",
     "📡 Every stat is sourced directly from Riot APIs.",
     `Check yours: ${APP_SHARE_URL}`,
@@ -158,20 +157,32 @@ Live telemetry from Riot endpoints keeps the receipts. Queue up and write the ne
 
 const LOSS_ROAST_TEMPLATES = [
   ({ champ, ratioLabel, role }) =>
-    `You piloted ${champ} like a Bronze ${role}. ${ratioLabel} is an inting masterclass.`,
+    `You piloted ${champ} like a Bronze ${role}. ${ratioLabel} KDA is an inting masterclass.`,
   ({ champ, ratioLabel }) =>
-    `${champ} with a ${ratioLabel} KDA? Even cannon minions felt the carry diff.`,
+    `${champ} with a shit KDA? Even cannon minions felt the carry diff.`,
   ({ champ }) =>
     `That loss looked like ${champ} was on autopilot. Maybe try playing with your monitor on.`,
+  ({ champ, ratioLabel }) =>
+    `The only thing ${champ} killed was your own LP. ${ratioLabel} KDA means you should uninstall.`,
+  ({ champ, role }) =>
+    `${champ} ${role} tech? More like a live tutorial on how to run it down.`,
+  ({ ratioLabel }) =>
+    `${ratioLabel} is the kind of stat that makes Riot investigate intentional feeding.`,
 ];
 
 const LUCK_TAUNT_TEMPLATES = [
   ({ champ, ratioLabel }) =>
-    `Enjoy that ${champ} win—${ratioLabel} screams pure luck, not skill.`,
+    `Enjoy that ${champ} win—${ratioLabel} KDA screams pure luck, not skill.`,
   ({ champ, ratioLabel }) =>
-    `${champ} only popped off because the matchmaking RNG blessed you. ${ratioLabel} isn't happening twice.`,
+    `${champ} only popped off because the matchmaking RNG blessed you. ${ratioLabel} KDA isn't happening twice.`,
   ({ champ }) =>
     `Screenshot that win with ${champ} while you can; nobody believes it wasn't a bot lobby.`,
+  ({ champ, ratioLabel }) =>
+    `You know it's cap when ${champ} posts ${ratioLabel} KDA and still whiffs every skill shot.`,
+  ({ champ }) =>
+    `Even ${champ} looked confused that Riot marked that as a victory.`,
+  ({ ratioLabel }) =>
+    `${ratioLabel} KDA? Sure, but the enemy jungler clearly DC'd.`,
 ];
 
 const BORING_WIN_TEMPLATES = [
@@ -180,6 +191,12 @@ const BORING_WIN_TEMPLATES = [
   ({ ratioLabel }) =>
     `${ratioLabel} KDA and still invisible? The squad dragged you across the finish line.`,
   () => `That victory was charity LP. Consider saying thank you to your randoms.`,
+  ({ champ }) =>
+    `${champ} win or not, you were just along for the Uber ride to Nexus.`,
+  ({ ratioLabel }) =>
+    `Calling that a clutch would be illegal advertising. ${ratioLabel} KDA just looks padded.`,
+  () =>
+    `Next time try pressing more than two buttons before flexing that scoreboard.`,
 ];
 
 const sumCharCodes = (value = "") =>
@@ -210,7 +227,7 @@ const getMatchTrashTalk = (match) => {
   if (!match) return "";
   const ratio = parseKdaRatio(match.kda);
   const isWin = String(match.result || "").toLowerCase() === "win";
-  const ratioLabel = Number.isFinite(ratio) ? `${ratio.toFixed(1)}:1` : "???:1";
+  const ratioLabel = Number.isFinite(ratio) ? `${ratio.toFixed(1)}` : "???";
   const champ = match.champion || "that pick";
   const role = (match.role || "role").toLowerCase();
   const seed =
@@ -904,10 +921,6 @@ function App() {
     if (typeof window === "undefined") return;
 
     const encodedSummary = encodeURIComponent(shareSummary);
-    const encodedTitle = encodeURIComponent(
-      `${recapData.summoner} — ${recapData.regionLabel} recap`
-    );
-
     switch (platform) {
       case "twitter":
         window.open(
@@ -916,29 +929,6 @@ function App() {
           "noopener,noreferrer"
         );
         setShareFeedback("Opened a ready-to-post Tweet in a new tab.");
-        break;
-      case "reddit":
-        window.open(
-          `https://www.reddit.com/submit?title=${encodedTitle}&text=${encodedSummary}`,
-          "_blank",
-          "noopener,noreferrer"
-        );
-        setShareFeedback("Reddit share drafted in a new tab.");
-        break;
-      case "discord":
-        {
-          const copied = await copyTextToClipboard(shareSummary);
-          setShareFeedback(
-            copied
-              ? "Recap copied. Paste it into your next Discord chat."
-              : "Copy failed. Please copy manually before posting to Discord."
-          );
-          window.open(
-            "https://discord.com/channels/@me",
-            "_blank",
-            "noopener,noreferrer"
-          );
-        }
         break;
       case "copy":
         {
@@ -1592,9 +1582,9 @@ function App() {
                 <div>
                   <h2>Share your recap</h2>
                   <p>
-                    Spotlight your climb with ready-to-post captions for X,
-                    Discord, or Reddit, complete with standout stats sourced
-                    directly from Riot&apos;s data feeds.
+                    Spotlight your climb with a ready-to-post caption for X or
+                    copy the rundown anywhere. Every flex pulls live stats from
+                    Riot&apos;s data feeds.
                   </p>
                 </div>
                 <div className="share-card__actions">
@@ -1608,26 +1598,13 @@ function App() {
                     </button>
                     <button
                       type="button"
-                      className="share-button share-button--discord"
-                      onClick={() => handleShare("discord")}
-                    >
-                      Share on Discord
-                    </button>
-                    <button
-                      type="button"
-                      className="share-button share-button--reddit"
-                      onClick={() => handleShare("reddit")}
-                    >
-                      Share to Reddit
-                    </button>
-                    <button
-                      type="button"
                       className="share-button share-button--copy"
                       onClick={() => handleShare("copy")}
                     >
                       Copy recap
                     </button>
                   </div>
+                  <p>Get your downloadable card in your Account Snapshot section to share your recap as an image!</p>
                   {shareFeedback && (
                     <p className="share-card__feedback">{shareFeedback}</p>
                   )}

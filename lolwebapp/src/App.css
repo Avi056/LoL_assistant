@@ -13,7 +13,7 @@
   --error: #f87171;
   --success: #34d399;
   --shadow: 0 24px 60px -30px rgba(124, 58, 237, 0.7);
-  --history-item-height: 200px;
+  --history-item-height: 300px;
   --history-item-gap: 20px;
 }
 
@@ -1711,14 +1711,6 @@ body {
 
 .share-button--twitter {
   background: linear-gradient(135deg, #1d9bf0, #1a8cd8);
-}
-
-.share-button--discord {
-  background: linear-gradient(135deg, #5865f2, #404eed);
-}
-
-.share-button--reddit {
-  background: linear-gradient(135deg, #ff4500, #ff6a33);
 }
 
 .share-button--copy {
