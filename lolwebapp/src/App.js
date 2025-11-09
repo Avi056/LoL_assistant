@@ -1281,10 +1281,19 @@ function App() {
                             <span>{match.csPerMin} CS / min</span>
                             <span>{match.duration}</span>
                           </div>
-                          {match.highlightTag && (
-                            <span className="history-item__badge">
-                              {match.highlightTag}
-                            </span>
+                          {(match.isBestGame || match.highlightTag) && (
+                            <div className="history-item__badges">
+                              {match.isBestGame && (
+                                <span className="history-item__badge history-item__badge--best">
+                                  Best Game
+                                </span>
+                              )}
+                              {match.highlightTag && (
+                                <span className="history-item__badge">
+                                  {match.highlightTag}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </li>
                       ))}
