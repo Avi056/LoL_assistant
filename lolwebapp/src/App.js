@@ -129,6 +129,30 @@ const normalizeRecapPayload = (payload, fallbackSummoner, regionLabel) => {
   };
 };
 
+const calculateTotalGames = (winDistribution = []) =>
+  winDistribution.reduce((acc, segment) => acc + (segment?.value ?? 0), 0);
+
+const calculateWinRate = (winDistribution = []) => {
+  const total = calculateTotalGames(winDistribution);
+  if (!total) return 0;
+  const wins =
+    winDistribution.find((segment) => segment.label === "Wins")?.value ?? 0;
+  return Math.round((wins / total) * 100);
+};
+
+const calculateKdaRatio = (kda = {}) => {
+  const kills = Number(kda?.kills ?? 0);
+  const deaths = Number(kda?.deaths ?? 0);
+  const assists = Number(kda?.assists ?? 0);
+  const ratio = (kills + assists) / Math.max(1, deaths);
+  return Number.isFinite(ratio) ? Number(ratio.toFixed(2)) : 0;
+};
+
+const safeNumber = (value) => {
+  const numeric = parseFloat(value);
+  return Number.isFinite(numeric) ? numeric : null;
+};
+
 const buildShareSummary = (recap, winRate, kdaRatio) => {
   const wins =
     recap.winDistribution.find((segment) => segment.label === "Wins")?.value ??
@@ -640,6 +664,12 @@ function App() {
   const [gameName, setGameName] = useState("");
   const [tagLine, setTagLine] = useState("");
   const [region, setRegion] = useState(REGION_OPTIONS[0].value);
+  const [compareName, setCompareName] = useState("");
+  const [compareTag, setCompareTag] = useState("");
+  const [compareRegion, setCompareRegion] = useState(region);
+  const [friendRecap, setFriendRecap] = useState(null);
+  const [isComparing, setIsComparing] = useState(false);
+  const [compareError, setCompareError] = useState("");
   const [view, setView] = useState("form");
   const [recapData, setRecapData] = useState(() =>
     createEmptyRecap({
@@ -880,7 +910,7 @@ function App() {
   );
 
   const totalGames = useMemo(
-    () => recapData.winDistribution.reduce((acc, segment) => acc + segment.value, 0),
+    () => calculateTotalGames(recapData.winDistribution),
     [recapData.winDistribution]
   );
   const winsSegment =
@@ -889,15 +919,16 @@ function App() {
   const lossesSegment =
     recapData.winDistribution.find((segment) => segment.label === "Losses") ??
     { value: 0 };
-  const winRate = totalGames
-    ? Math.round(((winsSegment.value ?? 0) / totalGames) * 100)
-    : 0;
-  const kdaRatio = (
-    (recapData.kda.kills + recapData.kda.assists) /
-    Math.max(1, recapData.kda.deaths)
-  ).toFixed(2);
+  const winRate = useMemo(
+    () => calculateWinRate(recapData.winDistribution),
+    [recapData.winDistribution]
+  );
+  const kdaRatio = useMemo(
+    () => calculateKdaRatio(recapData.kda),
+    [recapData.kda]
+  );
   const shareSummary = useMemo(
-    () => buildShareSummary(recapData, winRate, Number(kdaRatio)),
+    () => buildShareSummary(recapData, winRate, kdaRatio),
     [recapData, winRate, kdaRatio]
   );
 
@@ -977,6 +1008,82 @@ function App() {
       }
     ).id;
   }, [matchHistoryEntries]);
+
+  const friendWinRate = useMemo(
+    () =>
+      friendRecap ? calculateWinRate(friendRecap.winDistribution ?? []) : 0,
+    [friendRecap]
+  );
+  const friendKdaRatio = useMemo(
+    () => (friendRecap ? calculateKdaRatio(friendRecap.kda) : 0),
+    [friendRecap]
+  );
+  const friendTotalGames = useMemo(
+    () =>
+      friendRecap ? calculateTotalGames(friendRecap.winDistribution ?? []) : 0,
+    [friendRecap]
+  );
+  const comparisonMetrics = useMemo(() => {
+    if (!friendRecap) return [];
+    return [
+      {
+        label: "Win rate",
+        playerDisplay: `${winRate}%`,
+        friendDisplay: `${friendWinRate}%`,
+        playerValue: winRate,
+        friendValue: friendWinRate,
+      },
+      {
+        label: "KDA",
+        playerDisplay: kdaRatio.toFixed(2),
+        friendDisplay: friendKdaRatio.toFixed(2),
+        playerValue: kdaRatio,
+        friendValue: friendKdaRatio,
+      },
+      {
+        label: "Games analyzed",
+        playerDisplay: String(totalGames || recapData.lastGamesCount || 0),
+        friendDisplay: String(friendTotalGames || friendRecap.lastGamesCount || 0),
+        playerValue: totalGames || recapData.lastGamesCount || 0,
+        friendValue: friendTotalGames || friendRecap.lastGamesCount || 0,
+      },
+      {
+        label: "CS / min",
+        playerDisplay: recapData.kda.csPerMin ?? "—",
+        friendDisplay: friendRecap.kda?.csPerMin ?? "—",
+        playerValue: safeNumber(recapData.kda.csPerMin),
+        friendValue: safeNumber(friendRecap.kda?.csPerMin),
+      },
+      {
+        label: "Gold / min",
+        playerDisplay: recapData.kda.goldPerMin ?? "—",
+        friendDisplay: friendRecap.kda?.goldPerMin ?? "—",
+        playerValue: safeNumber(recapData.kda.goldPerMin),
+        friendValue: safeNumber(friendRecap.kda?.goldPerMin),
+      },
+      {
+        label: "Peak streak",
+        playerDisplay: recapData.kda.streak
+          ? `${recapData.kda.streak}W`
+          : "—",
+        friendDisplay: friendRecap.kda?.streak
+          ? `${friendRecap.kda.streak}W`
+          : "—",
+        playerValue: recapData.kda.streak ?? null,
+        friendValue: friendRecap.kda?.streak ?? null,
+      },
+    ];
+  }, [
+    friendRecap,
+    winRate,
+    friendWinRate,
+    kdaRatio,
+    friendKdaRatio,
+    totalGames,
+    recapData.lastGamesCount,
+    recapData.kda,
+    friendTotalGames,
+  ]);
 
   const fetchButtonText = loading
     ? FETCH_MATCH_PROGRESS[
@@ -1113,6 +1220,76 @@ function App() {
     }
   };
 
+  const handleCompareSubmit = async (event) => {
+    event.preventDefault();
+    if (isComparing) return;
+
+    const trimmedName = compareName.trim();
+    const trimmedTag = compareTag.trim();
+    if (!trimmedName || !trimmedTag) {
+      setCompareError("Enter a Riot ID and tag to compare.");
+      return;
+    }
+
+    setCompareError("");
+    setIsComparing(true);
+
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          game_name: trimmedName,
+          tag_line: trimmedTag,
+          region: compareRegion,
+        }),
+      });
+
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch {
+        payload = null;
+      }
+
+      if (!response.ok) {
+        const message =
+          payload?.error ||
+          `Compare request failed with status ${response.status}.`;
+        throw new Error(message);
+      }
+
+      const friendMatches = payload?.recap?.matchHistory ?? [];
+      if (friendMatches.length === 0) {
+        setFriendRecap(null);
+        setCompareError("No matches found for that Riot ID.");
+        return;
+      }
+
+      const compareRegionLabel =
+        REGION_OPTIONS.find((option) => option.value === compareRegion)
+          ?.label ?? compareRegion;
+      const friendSummoner =
+        payload.summoner ?? `${trimmedName}#${trimmedTag}`;
+      const normalizedFriendRecap = normalizeRecapPayload(
+        payload.recap,
+        friendSummoner,
+        compareRegionLabel
+      );
+      setFriendRecap(normalizedFriendRecap);
+      setCompareError("");
+    } catch (compareErr) {
+      console.error(compareErr);
+      setFriendRecap(null);
+      setCompareError(
+        compareErr?.message ||
+          "Could not fetch your friend's stats right now."
+      );
+    } finally {
+      setIsComparing(false);
+    }
+  };
+
   const handleIdentityShare = () => {
     try {
       if (typeof document === "undefined") {
@@ -1124,7 +1301,7 @@ function App() {
           resolvedProfile?.platform || recapData.regionLabel || "—"
         }`,
         winRate: `${winRate}%`,
-        kdaRatio,
+        kdaRatio: kdaRatio.toFixed(2),
         avgGame: resolvedAdvanced?.avgGameDurationLabel || "—",
         regionLabel: recapData.regionLabel,
         trendFocus: recapData.trendFocus || "Lock in games to surface macro focus.",
@@ -1148,6 +1325,19 @@ function App() {
       console.error(shareError);
       setIdentityShareStatus("Share export failed. Please try again.");
     }
+  };
+
+  const getCompareValueClass = (value, otherValue) => {
+    if (!Number.isFinite(value) || !Number.isFinite(otherValue)) {
+      return "compare-card__value";
+    }
+    if (value > otherValue) {
+      return "compare-card__value compare-card__value--better";
+    }
+    if (value < otherValue) {
+      return "compare-card__value compare-card__value--worse";
+    }
+    return "compare-card__value";
   };
 
   const handleGenerateRecap = async () => {
@@ -1434,7 +1624,7 @@ function App() {
                     </div>
                     <div>
                       <span>KDA</span>
-                      <strong>{kdaRatio}</strong>
+                      <strong>{kdaRatio.toFixed(2)}</strong>
                     </div>
                     <div>
                       <span>Avg game</span>
@@ -1532,7 +1722,7 @@ function App() {
                   <header className="stat-card__header">
                     <h2>KDA breakdown</h2>
                     <span className="stat-card__sub">
-                      Average {kdaRatio}:1 across recent games
+                      Average {kdaRatio.toFixed(2)}:1 across recent games
                     </span>
                   </header>
                   <div className="kda-grid">
@@ -1778,6 +1968,125 @@ function App() {
                     />
                   </div>
                 </div>
+              </article>
+
+              <article className="compare-card">
+                <div className="compare-card__intro">
+                  <div>
+                    <h2>Compare with a friend</h2>
+                    <p>
+                      Drop a friend&apos;s Riot ID to line up core stats like win
+                      rate, KDA, and tempo directly from Riot&apos;s live feeds.
+                    </p>
+                  </div>
+                  {friendRecap && (
+                    <div className="compare-card__legend">
+                      <strong>{recapData.summoner}</strong>
+                      <span>vs</span>
+                      <strong>{friendRecap.summoner}</strong>
+                    </div>
+                  )}
+                </div>
+                <form className="compare-card__form" onSubmit={handleCompareSubmit}>
+                  <div className="compare-card__fields">
+                    <div className="compare-card__field">
+                      <label className="field-label" htmlFor="compare-riot-name">
+                        Friend Riot ID
+                      </label>
+                      <div className="riot-id">
+                        <input
+                          id="compare-riot-name"
+                          type="text"
+                          placeholder="Summoner"
+                          value={compareName}
+                          onChange={(event) => setCompareName(event.target.value)}
+                        />
+                        <span className="riot-id__separator">#</span>
+                        <input
+                          id="compare-riot-tag"
+                          type="text"
+                          placeholder="Tag"
+                          value={compareTag}
+                          onChange={(event) => setCompareTag(event.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="compare-card__field compare-card__field--region">
+                      <label className="field-label" htmlFor="compare-region">
+                        Region
+                      </label>
+                      <div className="select-wrapper">
+                        <select
+                          id="compare-region"
+                          value={compareRegion}
+                          onChange={(event) => setCompareRegion(event.target.value)}
+                        >
+                          {REGION_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label} · {option.description}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="compare-card__actions">
+                    <button
+                      type="submit"
+                      className="primary-button"
+                      disabled={isComparing}
+                    >
+                      {isComparing ? "Comparing…" : "Compare stats"}
+                    </button>
+                    {compareError && (
+                      <p className="compare-card__error">{compareError}</p>
+                    )}
+                  </div>
+                </form>
+                {friendRecap && (
+                  <div className="compare-card__results">
+                    <p className="compare-card__status">
+                      Showing fresh match data for {friendRecap.summoner} (
+                      {friendRecap.regionLabel}).
+                    </p>
+                    <table className="compare-card__table">
+                      <thead>
+                        <tr>
+                          <th>Stat</th>
+                          <th>{recapData.summoner}</th>
+                          <th>{friendRecap.summoner}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {comparisonMetrics.map((metric) => (
+                          <tr key={metric.label}>
+                            <td>{metric.label}</td>
+                            <td>
+                              <span
+                                className={getCompareValueClass(
+                                  metric.playerValue,
+                                  metric.friendValue
+                                )}
+                              >
+                                {metric.playerDisplay}
+                              </span>
+                            </td>
+                            <td>
+                              <span
+                                className={getCompareValueClass(
+                                  metric.friendValue,
+                                  metric.playerValue
+                                )}
+                              >
+                                {metric.friendDisplay}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </article>
 
               <aside className="share-card">
