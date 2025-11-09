@@ -685,8 +685,6 @@ function App() {
           advancedMetrics: payload.advancedMetrics ?? null,
           matches: normalizedRecap.matchHistory ?? [],
         };
-      setRecapNarrative(payload.aiFeedback?.message || "");
-      setAiError(payload.aiFeedback?.error || "");
       setView("recap");
       setAnimateApp(true);
     } catch (requestError) {
