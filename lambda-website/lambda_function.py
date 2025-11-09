@@ -617,7 +617,7 @@ def _generate_ai_feedback(stats_context: Dict[str, Any]) -> Dict[str, Any]:
             "I am going to give you some LoL stats in JSON format."
             "Roast me very very hard like penguinz0. Brutal and savage."
             "Make it around 15 sentences in one format and tone. Short and sweet, no intro just straight roasting."
-            "All stats do not need to be covered. Put in emojis or emoticons."
+            "All stats do not need to be covered. Emphasize one-tricking and spamming one role. Put in emojis or emoticons."
             "\n\n"
             f"Stats JSON:\n{stats_json}"
         )
