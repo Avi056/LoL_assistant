@@ -147,7 +147,7 @@ const buildShareSummary = (recap, winRate, kdaRatio) => {
     : "Queue up to log fresh wins.";
 
   return [
-    `Here's my League of Legends Recap! Take a look:`,
+    `Here's my League of Legends Recap!`,
     `🎮 ${recap.summoner}'s Recap`,
     `🏆 ${wins}W / ${losses}L (${winRate.toFixed(1)}% WR)`,
     `💀 ${kdaRatio.toFixed(2)} KDA · ${recap.kda.csPerMin} CS/min · ${recap.kda.goldPerMin} GPM`,
@@ -1244,11 +1244,9 @@ function App() {
         {view === "form" ? (
           <main className="card card--compact">
               <div className="card__header">
-                <h1 className="title">League of Legends Match Explorer</h1>
+                <h1 className="title">League of Legends Recap</h1>
                 <p className="subtitle">
-                  Lock in your Riot ID and region to pull match history,
-                  account, league, platform-status, and macro insights directly
-                  from the Riot API stack.
+                  Lock in your Riot ID and region to pull match history and get some insights.
                 </p>
               </div>
 
@@ -1315,9 +1313,7 @@ function App() {
                 <header className="ai-card__header">
                   <h2>Generate Feedback</h2>
                   <p>
-                    Tap the button to let Claude 3 Haiku on AWS Bedrock
-                    roast your stats and drop constructive advice based on the
-                    live Riot API data.
+                    Tap the button to get your insights. Pick between our four "friends". Choose carefully...
                   </p>
                 </header>
                 <textarea
@@ -1363,7 +1359,7 @@ function App() {
                     {feedbackButtonText}
                   </button>
                   <span className="ai-card__hint">
-                    Powered by Amazon Bedrock (Claude 3.5 Haiku) and fresh Riot
+                    Powered by Amazon Bedrock (Claude 3 Haiku) and fresh Riot
                     API data.
                   </span>
                   {aiError && <span className="ai-card__error">{aiError}</span>}
