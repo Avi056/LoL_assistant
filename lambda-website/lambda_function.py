@@ -791,8 +791,6 @@ def lambda_handler(event, context):
             advanced_metrics,
             detailed_entries,
         )
-        ai_feedback = _generate_ai_feedback(stats_context)
-
         return _build_response(
             event,
             200,
@@ -805,7 +803,6 @@ def lambda_handler(event, context):
                 "leagueSummary": league_payload,
                 "platformStatus": platform_payload,
                 "advancedMetrics": advanced_metrics,
-                "aiFeedback": ai_feedback,
                 "aiStatsContext": stats_context,
                 "limits": {
                     "matchIdLimit": MATCH_ID_LIMIT,
