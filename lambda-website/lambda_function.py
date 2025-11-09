@@ -572,70 +572,91 @@ def _render_bedrock_content(response_json: Dict[str, Any]) -> str:
     # Default fallback
     return str(response_json).strip()
 
-
 def _generate_ai_feedback(stats_context: Dict[str, Any]) -> Dict[str, Any]:
-    """Generate AI feedback using Amazon Bedrock + Anthropic Claude."""
+    """Generate AI feedback using Amazon Bedrock + Anthropic Claude (with debug prints)."""
+
+    print("🟦 Entered _generate_ai_feedback()")
+
     if not ENABLE_BEDROCK:
-        return {
-            "message": "",
-            "modelId": None,
-            "error": "Amazon Bedrock integration disabled.",
-        }
+        print("❌ Bedrock disabled via config.")
+        return {"message": "", "modelId": None, "error": "Amazon Bedrock integration disabled."}
+
     if not boto3:
-        return {
-            "message": "",
-            "modelId": BEDROCK_MODEL_ID,
-            "error": "boto3 not available in environment.",
-        }
+        print("❌ boto3 not available in environment.")
+        return {"message": "", "modelId": BEDROCK_MODEL_ID, "error": "boto3 not available."}
+
     if not stats_context:
-        return {
-            "message": "",
-            "modelId": BEDROCK_MODEL_ID,
-            "error": "No stats provided for AI feedback.",
-        }
+        print("⚠️  No stats provided for AI feedback.")
+        return {"message": "", "modelId": BEDROCK_MODEL_ID, "error": "Empty stats context."}
 
     try:
+        print("🟨 Initializing Bedrock client...")
         bedrock = _get_bedrock_client()
         if bedrock is None:
             raise RuntimeError("Unable to initialize Bedrock client.")
+        print("✅ Bedrock client initialized successfully.")
 
-        # Build Anthropic-style prompt
+        # --- Build prompt ---
         stats_json = json.dumps(stats_context, ensure_ascii=False, indent=2)
         prompt = (
-            "I'm going to give you some League of Legends stats. "
-            "Give me a short roast like penguinz0 but constructive, two paragraphs max. "
-            "Don't cover every stat — make it flow, fun, and not offensive.\n\n"
+            "You are an assistant that analyzes League of Legends player stats. "
+            "Provide a short, funny, constructive 'roast' in 2 paragraphs. "
+            "Be witty but not mean.\n\n"
             f"Stats JSON:\n{stats_json}"
         )
+        print("🟨 Prompt constructed successfully.")
 
+        # --- Build Anthropic payload ---
         body = {
             "anthropic_version": "bedrock-2023-05-31",
             "max_tokens": 600,
             "temperature": 0.6,
+            "top_k": 250,
+            "top_p": 1,
             "messages": [
-                {
-                    "role": "user",
-                    "content": [{"type": "text", "text": prompt}],
-                }
+                {"role": "user", "content": [{"type": "text", "text": prompt}]}
             ],
         }
 
+        print(f"🟩 Payload ready for model '{BEDROCK_MODEL_ID}' in region '{BEDROCK_REGION}'")
+        print(json.dumps(body, indent=2)[:500] + " ...")  # print first 500 chars for safety
+
+        # --- Invoke model ---
         response = bedrock.invoke_model(
             modelId=BEDROCK_MODEL_ID,
             contentType="application/json",
             accept="application/json",
             body=json.dumps(body),
         )
+        print("✅ Model invocation returned a response object.")
 
-        # ✅ FIXED: read response correctly like your working example
+        # --- Read response body ---
         raw_body = response.get("body")
         if hasattr(raw_body, "read"):
+            print("🟨 Reading streaming body...")
             raw_body = raw_body.read()
-        payload = json.loads(raw_body)
+        else:
+            print("⚠️  Response body is not a stream:", type(raw_body))
 
-        message = _render_bedrock_content(payload)
-        if not message:
-            message = payload.get("output_text", "")
+        # --- Try to decode JSON ---
+        print("🟨 Decoding model output JSON...")
+        payload = json.loads(raw_body)
+        print("✅ JSON parsed successfully.")
+
+        # --- Debug: Show part of response ---
+        print("🧩 Response preview:", json.dumps(payload, indent=2)[:600])
+
+        # --- Extract text content ---
+        message = ""
+        if isinstance(payload, dict):
+            if "content" in payload:
+                message = "".join([part["text"] for part in payload["content"] if "text" in part])
+            elif "output_text" in payload:
+                message = payload["output_text"]
+            elif "completion" in payload:
+                message = payload["completion"]
+
+        print("✅ Final message extracted:", message[:400] + " ...")
 
         return {
             "message": message.strip(),
@@ -643,18 +664,14 @@ def _generate_ai_feedback(stats_context: Dict[str, Any]) -> Dict[str, Any]:
             "error": None,
         }
 
-    except (BotoCoreError, ClientError) as err:
+    except Exception as e:
+        print("❌ Exception during Bedrock call:", repr(e))
         return {
             "message": "",
             "modelId": BEDROCK_MODEL_ID,
-            "error": str(err),
+            "error": str(e),
         }
-    except Exception as exc:
-        return {
-            "message": "",
-            "modelId": BEDROCK_MODEL_ID,
-            "error": str(exc),
-        }
+
 
 
 # ---------- Lambda entry ----------
