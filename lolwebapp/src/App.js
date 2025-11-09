@@ -1216,7 +1216,7 @@ function App() {
             <section className="recap">
               <article className="ai-card ai-card--top">
                 <header className="ai-card__header">
-                  <h2>Generate Feedback (only for those with tough skin)</h2>
+                  <h2>Generate Feedback</h2>
                   <p>
                     Tap the button to let Claude 3 Haiku on AWS Bedrock
                     roast your stats and drop constructive advice based on the

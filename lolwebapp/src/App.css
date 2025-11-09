@@ -132,8 +132,8 @@ body {
 }
 
 .intro-screen__logo {
-  width: min(320px, 70vw);
-  max-width: 360px;
+  width: min(520px, 80vw);
+  max-width: 560px;
   height: auto;
   z-index: 2;
   filter: drop-shadow(0 35px 70px rgba(5, 7, 20, 0.65));
