@@ -818,6 +818,7 @@ def lambda_handler(event, context):
             },
         )
 
+
     except requests.RequestException as request_error:
         return _build_response(
             event,
