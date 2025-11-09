@@ -800,52 +800,68 @@ function App() {
     }
   };
 
-  const handleGenerateRecap = async () => {
-    if (isGeneratingRecap) return;
-    if (!aiStatsRef.current) {
-      setAiError("No stats available for AI feedback yet. Fetch matches first.");
-      return;
-    }
+ const handleGenerateRecap = async () => {
+  if (isGeneratingRecap) return;
+  if (!aiStatsRef.current) {
+    setAiError("No stats available for AI feedback yet. Fetch matches first.");
+    return;
+  }
 
-    setIsGeneratingRecap(true);
-    setAiError("");
+  setIsGeneratingRecap(true);
+  setAiError("");
 
+  console.log("🧠 Generating recap...");
+  console.log("📊 Sending stats to backend:", aiStatsRef.current);
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mode: "ai-feedback",
+        stats: aiStatsRef.current,
+      }),
+    });
+
+    console.log("📩 Response received:", response);
+    console.log("📩 Response status:", response.status);
+
+    let payload = null;
     try {
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode: "ai-feedback",
-          stats: aiStatsRef.current,
-        }),
-      });
+      const text = await response.text(); // Always read as text first
+      console.log("🧾 Raw response body:", text);
 
-      let payload = null;
-      try {
-        payload = await response.json();
-      } catch {
-        payload = null;
-      }
-
-      if (!response.ok) {
-        const message =
-          payload?.error ||
-          `Request failed with status ${response.status}. Please try again.`;
-        throw new Error(message);
-      }
-
-      const aiFeedback = payload?.aiFeedback || {};
-      setRecapNarrative(aiFeedback.message || "");
-      setAiError(aiFeedback.error || "");
-    } catch (requestError) {
-      console.error(requestError);
-      setAiError(
-        requestError?.message || "Something went wrong while generating feedback."
-      );
-    } finally {
-      setIsGeneratingRecap(false);
+      payload = JSON.parse(text);
+      console.log("✅ Parsed JSON payload:", payload);
+    } catch (parseErr) {
+      console.error("❌ Failed to parse response JSON:", parseErr);
+      payload = null;
     }
-  };
+
+    if (!response.ok) {
+      const message =
+        payload?.error ||
+        `Request failed with status ${response.status}. Please try again.`;
+      console.error("❌ Backend error:", message);
+      throw new Error(message);
+    }
+
+    const aiFeedback = payload?.aiFeedback || {};
+    console.log("🤖 AI Feedback object:", aiFeedback);
+
+    setRecapNarrative(aiFeedback.message || "");
+    setAiError(aiFeedback.error || "");
+  } catch (requestError) {
+    console.error("🔥 Request failed:", requestError);
+    setAiError(
+      requestError?.message || "Something went wrong while generating feedback."
+    );
+  } finally {
+    setIsGeneratingRecap(false);
+    console.log("✅ Finished generating recap");
+  }
+};
+
 
   return (
     <div className="app-shell">
