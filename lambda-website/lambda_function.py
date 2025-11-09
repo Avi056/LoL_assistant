@@ -550,9 +550,10 @@ def _get_bedrock_client():
 
 
 def _render_bedrock_content(response_json: Dict[str, Any]) -> str:
-    """Extract text output from various Bedrock/Anthropic model formats."""
-    # New Claude format (v2024+)
+    """Extract text output from various Bedrock model formats."""
+
     if isinstance(response_json, dict):
+        # Anthropic responses (messages -> content[] -> text)
         if "content" in response_json and isinstance(response_json["content"], list):
             parts = []
             for item in response_json["content"]:
@@ -561,19 +562,74 @@ def _render_bedrock_content(response_json: Dict[str, Any]) -> str:
             if parts:
                 return "".join(parts).strip()
 
-        # Older Anthropic or fallback
+        # AI21 Jamba responses use "outputs" or "output_text"
+        outputs = response_json.get("outputs")
+        if isinstance(outputs, list):
+            jamba_parts: List[str] = []
+            for output in outputs:
+                if isinstance(output, dict):
+                    text = output.get("text") or output.get("output_text")
+                    if text:
+                        jamba_parts.append(str(text))
+            if jamba_parts:
+                return "".join(jamba_parts).strip()
+
         if "output_text" in response_json:
-            return response_json["output_text"].strip()
+            return str(response_json["output_text"]).strip()
+        if "text" in response_json and isinstance(response_json["text"], str):
+            return response_json["text"].strip()
         if "completion" in response_json:
-            return response_json["completion"].strip()
+            return str(response_json["completion"]).strip()
         if "message" in response_json:
             return str(response_json["message"]).strip()
 
     # Default fallback
     return str(response_json).strip()
 
+
+def _build_bedrock_body(model_id: str, prompt: str) -> Dict[str, Any]:
+    """Create a request body compatible with the configured Bedrock model."""
+
+    model_id_lower = (model_id or "").lower()
+
+    if model_id_lower.startswith("anthropic."):
+        return {
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 600,
+            "temperature": 0.6,
+            "top_k": 250,
+            "top_p": 1,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [{"type": "text", "text": prompt}],
+                }
+            ],
+        }
+
+    if model_id_lower.startswith("ai21."):
+        return {
+            "input_text": prompt,
+            "parameters": {
+                "max_output_tokens": 600,
+                "temperature": 0.6,
+                "top_p": 0.9,
+                "stop_sequences": [],
+            },
+        }
+
+    # Generic text generation fallback (Titan / others)
+    return {
+        "inputText": prompt,
+        "textGenerationConfig": {
+            "maxTokenCount": 600,
+            "temperature": 0.6,
+            "topP": 0.9,
+        },
+    }
+
 def _generate_ai_feedback(stats_context: Dict[str, Any]) -> Dict[str, Any]:
-    """Generate AI feedback using Amazon Bedrock + Anthropic Claude (robust version)."""
+    """Generate AI feedback using Amazon Bedrock (supports Anthropic + AI21)."""
 
     print("🟦 Entered _generate_ai_feedback()")
 
@@ -604,15 +660,8 @@ def _generate_ai_feedback(stats_context: Dict[str, Any]) -> Dict[str, Any]:
             f"Stats JSON:\n{stats_json}"
         )
 
-        # Anthropic payload
-        body = {
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 600,
-            "temperature": 0.6,
-            "top_k": 250,
-            "top_p": 1,
-            "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}]}],
-        }
+        # Build model-specific payload
+        body = _build_bedrock_body(BEDROCK_MODEL_ID, prompt)
 
         response = bedrock.invoke_model(
             modelId=BEDROCK_MODEL_ID,
