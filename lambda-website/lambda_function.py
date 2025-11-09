@@ -666,9 +666,9 @@ AI_FEEDBACK_TONE_PROMPTS = {
         " Two paragraphs max. All caps. Crazy wild."
     ),
     "friend": (
-        "Given the JSON of League of Legends stats, respond like a supportive friend after a tough ranked session."
+        "Given the JSON of League of Legends stats, respond like a supportive friend."
         " Be empathetic, encouraging, and gently honest about improvements."
-        " Highlight one or two actionable tips but keep the priority on emotional support and motivation."
+        " Just be nice."
         " Two paragraphs, conversational tone. Genuine and kind."
     ),
 }
