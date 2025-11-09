@@ -672,8 +672,9 @@ def _generate_ai_feedback(stats_context: Dict[str, Any]) -> Dict[str, Any]:
         prompt = (
             "Given the JSON of LoL stats, brutally roast the player."
             "Include obscure metaphors like penguinz0."
-            "Around 15 sentences."
+            "Around 15 sentences. Two paragraphs"
             "Monotonous tone roast upon roasts."
+            "Use words like wacky, absurd, goofy, silly, bizarre, ridiculous, ludicrous."
             "Make it similar to this: "
             "\n\n"
             f"Stats JSON:\n{stats_json}"
