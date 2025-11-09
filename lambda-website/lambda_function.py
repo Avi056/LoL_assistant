@@ -615,9 +615,9 @@ def _generate_ai_feedback(stats_context: Dict[str, Any]) -> Dict[str, Any]:
         stats_json = json.dumps(stats_context, ensure_ascii=False, indent=2)
         prompt = (
             "I am going to give you some LoL stats in JSON format."
-            "Roast me very very hard like penguinz0. Maybe sprinkle in a little bit of feedback."
-            "Make it around 10 sentence in one format and tone. Short and sweet, no intro just straight roasting."
-            "All stats do not need to be covered. Roast me very very hard with obscure metaphors. Put in emojis."
+            "Roast me very very hard like penguinz0. Brutal and savage."
+            "Make it around 15 sentences in one format and tone. Short and sweet, no intro just straight roasting."
+            "All stats do not need to be covered. Put in emojis or emoticons."
             "\n\n"
             f"Stats JSON:\n{stats_json}"
         )
