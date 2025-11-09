@@ -27,6 +27,24 @@ const REGION_OPTIONS = [
   { value: "EUROPE", label: "Europe", description: "EUW, EUNE, TR, RU" },
 ];
 
+const FETCH_MATCH_PROGRESS = [
+  "Calling Riot APIs…",
+  "Spooling match history…",
+  "Crunching KDA ratios…",
+  "Ranking highlight reels…",
+  "Tuning champ insights…",
+  "Fetching matches…",
+];
+
+const FEEDBACK_PROGRESS = [
+  "Paging Claude…",
+  "Reviewing macro trends…",
+  "Judging your KP…",
+  "Scouting grief potential…",
+  "Sharpening the roast…",
+  "Generating feedback…",
+];
+
 const APP_SHARE_URL = "https://main.dmmttg0yma1yv.amplifyapp.com/";
 const DATA_DRAGON_VERSION = "14.24.1";
 const API_URL =
@@ -518,6 +536,8 @@ function App() {
   const [statusInsight, setStatusInsight] = useState(null);
   const [advancedInsight, setAdvancedInsight] = useState(null);
   const [hasLiveInsights, setHasLiveInsights] = useState(false);
+  const [fetchMessageIndex, setFetchMessageIndex] = useState(0);
+  const [feedbackMessageIndex, setFeedbackMessageIndex] = useState(0);
   const [aiError, setAiError] = useState("");
   const [identityShareStatus, setIdentityShareStatus] = useState("");
   const introDelayTimeoutRef = useRef(null);
@@ -560,6 +580,46 @@ function App() {
     const timer = setTimeout(() => setIdentityShareStatus(""), 2600);
     return () => clearTimeout(timer);
   }, [identityShareStatus]);
+
+  useEffect(() => {
+    if (!loading) {
+      setFetchMessageIndex(0);
+      return;
+    }
+
+    const totalMessages = FETCH_MATCH_PROGRESS.length;
+    setFetchMessageIndex(0);
+    let currentIndex = 0;
+    const interval = setInterval(() => {
+      currentIndex = Math.min(currentIndex + 1, totalMessages - 1);
+      setFetchMessageIndex(currentIndex);
+      if (currentIndex === totalMessages - 1) {
+        clearInterval(interval);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [loading]);
+
+  useEffect(() => {
+    if (!isGeneratingRecap) {
+      setFeedbackMessageIndex(0);
+      return;
+    }
+
+    const totalMessages = FEEDBACK_PROGRESS.length;
+    setFeedbackMessageIndex(0);
+    let currentIndex = 0;
+    const interval = setInterval(() => {
+      currentIndex = Math.min(currentIndex + 1, totalMessages - 1);
+      setFeedbackMessageIndex(currentIndex);
+      if (currentIndex === totalMessages - 1) {
+        clearInterval(interval);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [isGeneratingRecap]);
 
   const regionDetails = useMemo(
     () => REGION_OPTIONS.find((option) => option.value === region),
@@ -657,6 +717,18 @@ function App() {
       }
     ).id;
   }, [matchHistoryEntries]);
+
+  const fetchButtonText = loading
+    ? FETCH_MATCH_PROGRESS[
+        Math.min(fetchMessageIndex, FETCH_MATCH_PROGRESS.length - 1)
+      ]
+    : "Fetch matches";
+
+  const feedbackButtonText = isGeneratingRecap
+    ? FEEDBACK_PROGRESS[
+        Math.min(feedbackMessageIndex, FEEDBACK_PROGRESS.length - 1)
+      ]
+    : "Generate Feedback";
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -980,7 +1052,7 @@ function App() {
                     type="submit"
                     disabled={loading}
                   >
-                    {loading ? "Fetching matches…" : "Fetch matches"}
+                    {fetchButtonText}
                   </button>
                 </div>
               </form>
@@ -1011,7 +1083,7 @@ function App() {
                     onClick={handleGenerateRecap}
                     disabled={isGeneratingRecap}
                   >
-                    {isGeneratingRecap ? "Summoning feedback…" : "Generate Feedback"}
+                    {feedbackButtonText}
                   </button>
                   <span className="ai-card__hint">
                     Powered by Amazon Bedrock (Claude 3.5 Haiku) and fresh Riot
