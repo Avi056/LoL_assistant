@@ -276,20 +276,36 @@ def _build_recap_payload(
     if not playstyle_tags:
         playstyle_tags.append("Reliable Carry")
 
-    match_history = [
-        {
-            "id": entry["matchId"] or entry["id"],
-            "champion": entry["champion"],
-            "role": entry["role"],
-            "result": "Win" if entry["win"] else "Loss",
-            "kda": entry["kda"],
-            "csPerMin": round(entry["cs_per_min"], 2),
-            "damage": f"{round(entry['damage_champs'] / 1000, 1)}k dmg",
-            "duration": entry["duration_label"],
-            "highlightTag": entry["highlight_tag"],
-        }
-        for entry in matches[:MATCH_HISTORY_LIMIT]
-    ]
+    recent_matches = matches[:MATCH_HISTORY_LIMIT]
+    best_recent_match = max(
+        recent_matches,
+        key=lambda entry: entry.get("hero_score", float("-inf")),
+        default=None,
+    )
+    best_match_id = (
+        (best_recent_match.get("matchId") or best_recent_match.get("id"))
+        if best_recent_match
+        else None
+    )
+
+    match_history = []
+    for entry in recent_matches:
+        entry_id = entry["matchId"] or entry["id"]
+        match_history.append(
+            {
+                "id": entry_id,
+                "champion": entry["champion"],
+                "role": entry["role"],
+                "result": "Win" if entry["win"] else "Loss",
+                "kda": entry["kda"],
+                "csPerMin": round(entry["cs_per_min"], 2),
+                "damage": f"{round(entry['damage_champs'] / 1000, 1)}k dmg",
+                "duration": entry["duration_label"],
+                "highlightTag": entry["highlight_tag"],
+                "heroScore": round(entry.get("hero_score", 0.0), 2),
+                "isBestGame": bool(best_match_id and entry_id == best_match_id),
+            }
+        )
 
     highlight_moments = []
     for entry in sorted(matches, key=lambda e: e["hero_score"], reverse=True)[:3]:
