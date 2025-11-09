@@ -615,6 +615,49 @@ function App() {
   const primaryHighlight = highlightEntries[0];
   const lastActiveLabel = formatDateLabel(resolvedProfile?.lastActiveIso);
 
+  const bestHistoryMatchId = useMemo(() => {
+    if (!matchHistoryEntries || matchHistoryEntries.length === 0) {
+      return null;
+    }
+
+    const scoreForMatch = (match) => {
+      if (
+        typeof match?.heroScore === "number" &&
+        !Number.isNaN(match.heroScore)
+      ) {
+        return match.heroScore;
+      }
+
+      const [kills = 0, deaths = 0, assists = 0] =
+        match?.kda
+          ?.split("/")
+          ?.map((value) => parseFloat(value.trim()) || 0) ?? [];
+      const kdaScore = ((kills + assists) / Math.max(1, deaths)) * 100;
+
+      const damageLabel = String(match?.damage || "").toLowerCase();
+      const rawDamage = parseFloat(damageLabel.replace(/[^\d.]/g, "")) || 0;
+      const damageScore = damageLabel.includes("k") ? rawDamage * 1000 : rawDamage;
+
+      const csScore = parseFloat(match?.csPerMin) || 0;
+
+      return kdaScore + damageScore + csScore * 10;
+    };
+
+    return matchHistoryEntries.reduce(
+      (best, match) => {
+        const score = scoreForMatch(match);
+        if (score > best.score) {
+          return { id: match.id, score };
+        }
+        return best;
+      },
+      {
+        id: matchHistoryEntries[0]?.id ?? null,
+        score: scoreForMatch(matchHistoryEntries[0]),
+      }
+    ).id;
+  }, [matchHistoryEntries]);
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     const trimmedName = gameName.trim();
@@ -1256,8 +1299,17 @@ function App() {
                   </header>
                   {matchHistoryEntries.length > 0 ? (
                     <ul className="history-list">
-                      {matchHistoryEntries.map((match) => (
-                        <li key={match.id} className="history-item">
+                      {matchHistoryEntries.map((match) => {
+                        const isBestGame =
+                          typeof match.isBestGame === "boolean"
+                            ? match.isBestGame
+                            : Boolean(
+                                bestHistoryMatchId &&
+                                  match.id &&
+                                  match.id === bestHistoryMatchId
+                              );
+                        return (
+                          <li key={match.id} className="history-item">
                           <div className="history-item__top">
                             <span
                               className={`history-item__result history-item__result--${match.result.toLowerCase()}`}
@@ -1279,9 +1331,9 @@ function App() {
                             <span>{match.csPerMin} CS / min</span>
                             <span>{match.duration}</span>
                           </div>
-                          {(match.isBestGame || match.highlightTag) && (
+                          {(isBestGame || match.highlightTag) && (
                             <div className="history-item__badges">
-                              {match.isBestGame && (
+                              {isBestGame && (
                                 <span className="history-item__badge history-item__badge--best">
                                   Best Game
                                 </span>
@@ -1294,7 +1346,8 @@ function App() {
                             </div>
                           )}
                         </li>
-                      ))}
+                        );
+                      })}
                     </ul>
                   ) : (
                     <p className="empty-state">
