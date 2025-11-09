@@ -13,7 +13,7 @@
   --error: #f87171;
   --success: #34d399;
   --shadow: 0 24px 60px -30px rgba(124, 58, 237, 0.7);
-  --history-item-height: 130px;
+  --history-item-height: 120px;
 }
 
 * {
@@ -1556,6 +1556,7 @@ body {
 .history-item__row--meta {
   font-size: 0.9rem;
   color: var(--text-muted);
+  margin-bottom: 4px;
 }
 
 .history-item__champion {
@@ -1572,10 +1573,11 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-top: 6px;
+  align-items: flex-start;
 }
 
 .history-item__badge {
-  align-self: flex-start;
   padding: 6px 14px;
   border-radius: 999px;
   background: rgba(236, 72, 153, 0.2);
