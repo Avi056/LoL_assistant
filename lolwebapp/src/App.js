@@ -1064,7 +1064,7 @@ function App() {
                 <header className="ai-card__header">
                   <h2>Generate Feedback (only for those with tough skin)</h2>
                   <p>
-                    Tap the button to let Claude 3.5 Haiku on AWS Bedrock
+                    Tap the button to let Claude 3 Haiku on AWS Bedrock
                     roast your stats and drop constructive advice based on the
                     live Riot API data.
                   </p>

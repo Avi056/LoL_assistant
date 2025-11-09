@@ -45,7 +45,7 @@ ALLOWED_ORIGINS = [o.strip() for o in _RAW_ALLOWED_ORIGINS.split(",") if o.strip
 
 ENABLE_BEDROCK = (os.environ.get("ENABLE_BEDROCK", "true").lower() not in {"0", "false", "no"})
 BEDROCK_MODEL_ID = os.environ.get(
-    "BEDROCK_MODEL_ID", "anthropic.claude-3-5-haiku-20241022-v1:0"
+    "BEDROCK_MODEL_ID", "anthropic.claude-3-haiku-20240307-v1:0"
 )
 BEDROCK_REGION = os.environ.get("BEDROCK_REGION", os.environ.get("AWS_REGION", "us-east-1"))
 
