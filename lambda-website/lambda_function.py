@@ -673,11 +673,11 @@ AI_FEEDBACK_TONE_PROMPTS = {
     ),
 }
 
-
 def _generate_ai_feedback(stats_context: Dict[str, Any], prompt_style: Optional[str] = None) -> Dict[str, Any]:
     """Generate AI feedback using Amazon Bedrock (supports Anthropic + AI21)."""
 
     print("🟦 Entered _generate_ai_feedback()")
+    print("🔎 Raw prompt_style passed in:", repr(prompt_style))
 
     if not ENABLE_BEDROCK:
         print("❌ Bedrock disabled via config.")
@@ -697,13 +697,20 @@ def _generate_ai_feedback(stats_context: Dict[str, Any], prompt_style: Optional[
             raise RuntimeError("Unable to initialize Bedrock client.")
         print("✅ Bedrock client initialized successfully.")
 
+        # Normalize and validate tone
+        raw_tone = (prompt_style or DEFAULT_FEEDBACK_TONE)
+        tone_key = str(raw_tone).strip().lower()
+        if tone_key not in AI_FEEDBACK_TONE_PROMPTS:
+            print(f"⚠️ Unknown tone '{tone_key}', falling back to default '{DEFAULT_FEEDBACK_TONE}'")
+            tone_key = DEFAULT_FEEDBACK_TONE
+
+        instructions = AI_FEEDBACK_TONE_PROMPTS[tone_key]
+        print("🎯 Using tone_key:", tone_key)
+
         # Build prompt
         stats_json = json.dumps(stats_context, ensure_ascii=False, indent=2)
-        tone_key = (prompt_style or DEFAULT_FEEDBACK_TONE).lower()
-        instructions = AI_FEEDBACK_TONE_PROMPTS.get(
-            tone_key, AI_FEEDBACK_TONE_PROMPTS[DEFAULT_FEEDBACK_TONE]
-        )
         prompt = f"{instructions}\n\nStats JSON:\n{stats_json}"
+        print("🧾 Prompt prefix preview:", prompt[:220])
 
         # Build model-specific payload
         body = _build_bedrock_body(BEDROCK_MODEL_ID, prompt)
@@ -715,7 +722,6 @@ def _generate_ai_feedback(stats_context: Dict[str, Any], prompt_style: Optional[
             body=json.dumps(body),
         )
 
-        # Read response body
         raw_body = response.get("body")
         if hasattr(raw_body, "read"):
             raw_body = raw_body.read()
@@ -723,7 +729,6 @@ def _generate_ai_feedback(stats_context: Dict[str, Any], prompt_style: Optional[
         payload = json.loads(raw_body)
         print("🧩 Bedrock response preview:", json.dumps(payload, indent=2)[:600])
 
-        # Use robust renderer
         message = _render_bedrock_content(payload)
 
         if not message:
@@ -736,6 +741,7 @@ def _generate_ai_feedback(stats_context: Dict[str, Any], prompt_style: Optional[
     except Exception as e:
         print("❌ Exception during Bedrock call:", repr(e))
         return {"message": "", "modelId": BEDROCK_MODEL_ID, "error": str(e)}
+
 
 
 # ---------- Lambda entry ----------
