@@ -14,7 +14,10 @@ except ImportError:  # pragma: no cover - lambda environment provides boto3
     boto3 = None
     BotoCoreError = ClientError = Exception
 
-print("boto3 version:", boto3.__version__)
+if boto3 is not None:
+    print("boto3 version:", boto3.__version__)
+else:
+    print("boto3 not available")
 
 # --- Environment variables ---
 RIOT_API_KEY = os.environ.get("RIOT_API_KEY")
@@ -733,13 +736,16 @@ def _generate_ai_feedback(stats_context: Dict[str, Any], prompt_style: Optional[
         tone_key = _normalize_prompt_style(prompt_style)
         print("🎯 Normalized tone_key:", tone_key)
         
-
+        style_guard = (
+            f"You must respond ONLY in the '{tone_key}' style. "
+            f"Do not mix styles or describe this as multiple tones."
+        )
         instructions = AI_FEEDBACK_TONE_PROMPTS[tone_key]
         print("🎯 Using tone_key:", tone_key)
 
         # Build prompt
         stats_json = json.dumps(stats_context, ensure_ascii=False, indent=2)
-        prompt = f"{instructions}\n\nStats JSON:\n{stats_json}"
+        prompt = f"{style_guard}\n\n{instructions}\n\nStats JSON:\n{stats_json}"
         print("🧾 Prompt prefix preview:", prompt[:220])
 
         # Build model-specific payload
