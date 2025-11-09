@@ -16,6 +16,7 @@ const introBackground = buildPublicAssetUrl(INTRO_BACKGROUND_ASSET);
 const leagueLogo = buildPublicAssetUrl(LEAGUE_LOGO_ASSET);
 const introAudioUrl = buildPublicAssetUrl(INTRO_AUDIO_ASSET);
 const statsAudioUrl = buildPublicAssetUrl(STATS_AUDIO_ASSET);
+const AUDIO_UNLOCK_EVENTS = ["pointerdown", "keydown", "touchstart"];
 const PIE_CHART_COLORS = [
   "#7c3aed",
   "#c084fc",
@@ -667,6 +668,7 @@ function App() {
     FEEDBACK_TONE_OPTIONS[0].value
   );
   const [activeAudio, setActiveAudio] = useState("intro");
+  const [audioReady, setAudioReady] = useState(false);
   const introDelayTimeoutRef = useRef(null);
   const introHideTimeoutRef = useRef(null);
   const aiStatsRef = useRef(null);
@@ -675,6 +677,40 @@ function App() {
   const logoFlightTriggeredRef = useRef(false);
   const introAudioRef = useRef(null);
   const statsAudioRef = useRef(null);
+  const audioUnlockHandlerRef = useRef(null);
+  const requestAudioPlayback = useCallback(
+    (audioInstance) => {
+      if (!audioInstance) return;
+
+      const attemptPlay = () => {
+        const playPromise = audioInstance.play();
+        if (playPromise?.catch) {
+          playPromise.catch(() => {
+            if (
+              typeof window === "undefined" ||
+              audioUnlockHandlerRef.current
+            ) {
+              return;
+            }
+            const unlock = () => {
+              AUDIO_UNLOCK_EVENTS.forEach((eventName) => {
+                window.removeEventListener(eventName, unlock);
+              });
+              audioUnlockHandlerRef.current = null;
+              attemptPlay();
+            };
+            audioUnlockHandlerRef.current = unlock;
+            AUDIO_UNLOCK_EVENTS.forEach((eventName) => {
+              window.addEventListener(eventName, unlock);
+            });
+          });
+        }
+      };
+
+      attemptPlay();
+    },
+    []
+  );
 
   useEffect(() => {
     introDelayTimeoutRef.current = setTimeout(() => {
@@ -723,22 +759,22 @@ function App() {
     statsAudio.loop = true;
     statsAudioRef.current = statsAudio;
 
-    introAudio
-      .play()
-      .then(() => {
-        setActiveAudio("intro");
-      })
-      .catch(() => {
-        // Autoplay may fail; keep refs alive and wait for user interaction.
-      });
+    setAudioReady(true);
 
     return () => {
       introAudio.pause();
       statsAudio.pause();
+      if (typeof window !== "undefined" && audioUnlockHandlerRef.current) {
+        AUDIO_UNLOCK_EVENTS.forEach((eventName) => {
+          window.removeEventListener(eventName, audioUnlockHandlerRef.current);
+        });
+        audioUnlockHandlerRef.current = null;
+      }
     };
   }, []);
 
   useEffect(() => {
+    if (!audioReady) return;
     const targetAudio =
       activeAudio === "intro" ? introAudioRef.current : statsAudioRef.current;
     const otherAudio =
@@ -749,10 +785,10 @@ function App() {
       otherAudio.currentTime = 0;
     }
 
-    targetAudio?.play().catch(() => {
-      // Ignore autoplay rejection; already playing will resume on user gesture.
-    });
-  }, [activeAudio]);
+    if (targetAudio) {
+      requestAudioPlayback(targetAudio);
+    }
+  }, [activeAudio, audioReady, requestAudioPlayback]);
 
   const animateLogoFlight = useCallback(() => {
     if (typeof window === "undefined") return;
