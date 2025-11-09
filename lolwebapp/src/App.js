@@ -45,6 +45,29 @@ const FEEDBACK_PROGRESS = [
   "Generating feedback…",
 ];
 
+const FEEDBACK_TONE_OPTIONS = [
+  {
+    value: "roast",
+    label: "Get Roasted",
+    description: "Full-send burns and savage metaphors.",
+  },
+  {
+    value: "constructive",
+    label: "Constructive Feedback",
+    description: "Balanced critique with actionable fixes.",
+  },
+  {
+    value: "hype",
+    label: "Hype Man",
+    description: "Over-the-top praise and positivity.",
+  },
+  {
+    value: "friend",
+    label: "I NEED A FRIEND",
+    description: "Gentle, supportive pep talk energy.",
+  },
+];
+
 const APP_SHARE_URL = "https://main.dmmttg0yma1yv.amplifyapp.com/";
 const DATA_DRAGON_VERSION = "14.24.1";
 const API_URL =
@@ -636,9 +659,15 @@ function App() {
   const [feedbackMessageIndex, setFeedbackMessageIndex] = useState(0);
   const [aiError, setAiError] = useState("");
   const [identityShareStatus, setIdentityShareStatus] = useState("");
+  const [feedbackTone, setFeedbackTone] = useState(
+    FEEDBACK_TONE_OPTIONS[0].value
+  );
   const introDelayTimeoutRef = useRef(null);
   const introHideTimeoutRef = useRef(null);
   const aiStatsRef = useRef(null);
+  const riotIdRef = useRef(null);
+  const introLogoRef = useRef(null);
+  const logoFlightTriggeredRef = useRef(false);
 
   useEffect(() => {
     introDelayTimeoutRef.current = setTimeout(() => {
@@ -646,7 +675,7 @@ function App() {
       introHideTimeoutRef.current = setTimeout(() => {
         setShowIntro(false);
         setAnimateApp(true);
-      }, 600);
+      }, 700);
     }, 3000);
 
     return () => {
@@ -676,6 +705,50 @@ function App() {
     const timer = setTimeout(() => setIdentityShareStatus(""), 2600);
     return () => clearTimeout(timer);
   }, [identityShareStatus]);
+
+  const animateLogoFlight = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const logoEl = introLogoRef.current;
+    const container = riotIdRef.current;
+    if (!logoEl || !container) return;
+
+    const targetNode = container.querySelector("input") || container;
+    const logoRect = logoEl.getBoundingClientRect();
+    const targetRect = targetNode.getBoundingClientRect();
+    const logoCenterX = logoRect.left + logoRect.width / 2;
+    const logoCenterY = logoRect.top + logoRect.height / 2;
+    const targetCenterX = targetRect.left + targetRect.width / 2;
+    const targetCenterY = targetRect.top + targetRect.height / 2;
+    const translateX = targetCenterX - logoCenterX;
+    const translateY = targetCenterY - logoCenterY;
+
+    if (typeof logoEl.animate !== "function") {
+      logoEl.style.transform = `translate3d(${translateX}px, ${translateY}px, 0) scale(0.32)`;
+      logoEl.style.opacity = "0";
+      return;
+    }
+
+    logoEl.animate(
+      [
+        { transform: "translate3d(0, 0, 0) scale(1)", opacity: 1 },
+        {
+          transform: `translate3d(${translateX}px, ${translateY}px, 0) scale(0.32)`,
+          opacity: 0,
+        },
+      ],
+      {
+        duration: 550,
+        easing: "cubic-bezier(0.19, 1, 0.22, 1)",
+        fill: "forwards",
+      }
+    );
+  }, []);
+
+  useEffect(() => {
+    if (introStage !== "exit" || logoFlightTriggeredRef.current) return;
+    logoFlightTriggeredRef.current = true;
+    animateLogoFlight();
+  }, [introStage, animateLogoFlight]);
 
   useEffect(() => {
     if (!loading) {
@@ -742,6 +815,13 @@ function App() {
   const shareSummary = useMemo(
     () => buildShareSummary(recapData, winRate, Number(kdaRatio)),
     [recapData, winRate, kdaRatio]
+  );
+
+  const selectedFeedbackTone = useMemo(
+    () =>
+      FEEDBACK_TONE_OPTIONS.find((tone) => tone.value === feedbackTone) ??
+      FEEDBACK_TONE_OPTIONS[0],
+    [feedbackTone]
   );
 
   const resolvedProfile = hasLiveInsights ? profileInsight : null;
@@ -915,6 +995,7 @@ function App() {
     setRecapNarrative("");
     setAiError("");
     aiStatsRef.current = null;
+    setFeedbackTone(FEEDBACK_TONE_OPTIONS[0].value);
   };
 
   const handleShare = async (platform) => {
@@ -982,67 +1063,68 @@ function App() {
     }
   };
 
- const handleGenerateRecap = async () => {
-  if (isGeneratingRecap) return;
-  if (!aiStatsRef.current) {
-    setAiError("No stats available for AI feedback yet. Fetch matches first.");
-    return;
-  }
+  const handleGenerateRecap = async () => {
+    if (isGeneratingRecap) return;
+    if (!aiStatsRef.current) {
+      setAiError("No stats available for AI feedback yet. Fetch matches first.");
+      return;
+    }
 
-  setIsGeneratingRecap(true);
-  setAiError("");
+    setIsGeneratingRecap(true);
+    setAiError("");
 
-  console.log("🧠 Generating recap...");
-  console.log("📊 Sending stats to backend:", aiStatsRef.current);
+    console.log("🧠 Generating recap...");
+    console.log("📊 Sending stats to backend:", aiStatsRef.current);
 
-  try {
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        mode: "ai-feedback",
-        stats: aiStatsRef.current,
-      }),
-    });
-
-    console.log("📩 Response received:", response);
-    console.log("📩 Response status:", response.status);
-
-    let payload = null;
     try {
-      const text = await response.text(); // Always read as text first
-      console.log("🧾 Raw response body:", text);
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "ai-feedback",
+          stats: aiStatsRef.current,
+          promptStyle: feedbackTone,
+        }),
+      });
 
-      payload = JSON.parse(text);
-      console.log("✅ Parsed JSON payload:", payload);
-    } catch (parseErr) {
-      console.error("❌ Failed to parse response JSON:", parseErr);
-      payload = null;
+      console.log("📩 Response received:", response);
+      console.log("📩 Response status:", response.status);
+
+      let payload = null;
+      try {
+        const text = await response.text(); // Always read as text first
+        console.log("🧾 Raw response body:", text);
+
+        payload = JSON.parse(text);
+        console.log("✅ Parsed JSON payload:", payload);
+      } catch (parseErr) {
+        console.error("❌ Failed to parse response JSON:", parseErr);
+        payload = null;
+      }
+
+      if (!response.ok) {
+        const message =
+          payload?.error ||
+          `Request failed with status ${response.status}. Please try again.`;
+        console.error("❌ Backend error:", message);
+        throw new Error(message);
+      }
+
+      const aiFeedback = payload?.aiFeedback || {};
+      console.log("🤖 AI Feedback object:", aiFeedback);
+
+      setRecapNarrative(aiFeedback.message || "");
+      setAiError(aiFeedback.error || "");
+    } catch (requestError) {
+      console.error("🔥 Request failed:", requestError);
+      setAiError(
+        requestError?.message || "Something went wrong while generating feedback."
+      );
+    } finally {
+      setIsGeneratingRecap(false);
+      console.log("✅ Finished generating recap");
     }
-
-    if (!response.ok) {
-      const message =
-        payload?.error ||
-        `Request failed with status ${response.status}. Please try again.`;
-      console.error("❌ Backend error:", message);
-      throw new Error(message);
-    }
-
-    const aiFeedback = payload?.aiFeedback || {};
-    console.log("🤖 AI Feedback object:", aiFeedback);
-
-    setRecapNarrative(aiFeedback.message || "");
-    setAiError(aiFeedback.error || "");
-  } catch (requestError) {
-    console.error("🔥 Request failed:", requestError);
-    setAiError(
-      requestError?.message || "Something went wrong while generating feedback."
-    );
-  } finally {
-    setIsGeneratingRecap(false);
-    console.log("✅ Finished generating recap");
-  }
-};
+  };
 
 
   return (
@@ -1053,14 +1135,17 @@ function App() {
             className="intro-screen__logo"
             src={leagueLogo}
             alt="League of Legends logo"
+            ref={introLogoRef}
           />
         </div>
       )}
-
-      {!showIntro && (
-        <div className={`app ${animateApp ? "app--enter" : ""}`}>
-          {view === "form" ? (
-            <main className="card card--compact">
+      <div
+        className={`app ${animateApp ? "app--enter" : ""} ${
+          showIntro ? "app--preload" : ""
+        }`}
+      >
+        {view === "form" ? (
+          <main className="card card--compact">
               <div className="card__header">
                 <h1 className="title">League of Legends Match Explorer</h1>
                 <p className="subtitle">
@@ -1075,7 +1160,7 @@ function App() {
                   <label className="field-label" htmlFor="riot-name">
                     Riot ID
                   </label>
-                  <div className="riot-id">
+                  <div className="riot-id" ref={riotIdRef}>
                     <input
                       id="riot-name"
                       type="text"
@@ -1145,13 +1230,35 @@ function App() {
                   placeholder="Prepare your eyeballs..."
                   readOnly
                 />
-                <div className="ai-card__actions">
-                  <button
-                    type="button"
-                    className="primary-button"
-                    onClick={handleGenerateRecap}
-                    disabled={isGeneratingRecap}
-                  >
+              <div className="ai-card__actions">
+                <div className="ai-card__tone-control">
+                  <label className="ai-card__tone-label" htmlFor="feedback-tone">
+                    Feedback style
+                  </label>
+                  <div className="select-wrapper select-wrapper--compact">
+                    <select
+                      id="feedback-tone"
+                      value={feedbackTone}
+                      onChange={(event) => setFeedbackTone(event.target.value)}
+                      disabled={isGeneratingRecap}
+                    >
+                      {FEEDBACK_TONE_OPTIONS.map((tone) => (
+                        <option key={tone.value} value={tone.value}>
+                          {tone.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <span className="ai-card__tone-description">
+                    {selectedFeedbackTone.description}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={handleGenerateRecap}
+                  disabled={isGeneratingRecap}
+                >
                     {feedbackButtonText}
                   </button>
                   <span className="ai-card__hint">
@@ -1618,7 +1725,6 @@ function App() {
             </section>
           )}
         </div>
-      )}
     </div>
   );
 }
