@@ -18,9 +18,9 @@ except ImportError:  # pragma: no cover - lambda environment provides boto3
 RIOT_API_KEY = os.environ.get("RIOT_API_KEY")
 CUSTOM_API_KEY = os.environ.get("CUSTOM_API_KEY")
 
-MATCH_ID_LIMIT = int(os.environ.get("MATCH_ID_LIMIT", "5"))
-MATCH_DETAIL_LIMIT = int(os.environ.get("MATCH_DETAIL_LIMIT", "10"))
-MATCH_HISTORY_LIMIT = int(os.environ.get("MATCH_HISTORY_LIMIT", "5"))
+MATCH_ID_LIMIT = int(os.environ.get("MATCH_ID_LIMIT", "20"))
+MATCH_DETAIL_LIMIT = int(os.environ.get("MATCH_DETAIL_LIMIT", "20"))
+MATCH_HISTORY_LIMIT = int(os.environ.get("MATCH_HISTORY_LIMIT", "20"))
 
 DEFAULT_PLATFORM_BY_REGION = {
     "AMERICAS": "na1",
@@ -33,7 +33,7 @@ ALLOWED_ORIGINS = [o.strip() for o in _RAW_ALLOWED_ORIGINS.split(",") if o.strip
 
 ENABLE_BEDROCK = (os.environ.get("ENABLE_BEDROCK", "true").lower() not in {"0", "false", "no"})
 BEDROCK_MODEL_ID = os.environ.get(
-    "BEDROCK_MODEL_ID", "anthropic.claude-3-sonnet-20240229-v1:0"
+    "BEDROCK_MODEL_ID", "anthropic.claude-3-5-haiku-20241022-v1:0"
 )
 BEDROCK_REGION = os.environ.get("BEDROCK_REGION", os.environ.get("AWS_REGION", "us-east-1"))
 
@@ -593,10 +593,8 @@ def _generate_ai_feedback(stats_context: Dict[str, Any]) -> Dict[str, Any]:
 
     body = {
         "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 2048,
-        "temperature": 0.9,
-        "top_k": 250,
-        "top_p": 1,
+        "max_tokens": 600,
+        "temperature": 0.6,
         "messages": [
             {
                 "role": "user",
@@ -613,7 +611,9 @@ def _generate_ai_feedback(stats_context: Dict[str, Any]) -> Dict[str, Any]:
     try:
         response = client.invoke_model(
             modelId=BEDROCK_MODEL_ID,
-            body=json.dumps(body),
+            contentType="application/json",
+            accept="application/json",
+            body=json.dumps(body).encode("utf-8"),
         )
         payload = json.loads(response["body"].read())
         message = _render_bedrock_content(payload)
