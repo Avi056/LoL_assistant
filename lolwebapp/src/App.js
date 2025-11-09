@@ -1164,11 +1164,10 @@ function App() {
     console.log("🧠 Generating recap...");
     console.log("📊 Sending stats to backend:", aiStatsRef.current);
 
-    // const toneKey =
-    //   selectedFeedbackTone?.value ||
-    //   feedbackTone ||
-    //   FEEDBACK_TONE_OPTIONS[0].value;
-    const toneKey = feedbackToneRef.current || FEEDBACK_TONE_OPTIONS[0].value;
+    const toneKey =
+      selectedFeedbackTone?.value ||
+      feedbackTone ||
+      FEEDBACK_TONE_OPTIONS[0].value;
     console.log("🎛️ Selected feedback tone:", toneKey);
 
     try {
