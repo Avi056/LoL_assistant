@@ -131,6 +131,16 @@ body {
   animation: introFadeOut 0.9s ease forwards;
 }
 
+.intro-screen__logo {
+  width: min(320px, 70vw);
+  max-width: 360px;
+  height: auto;
+  z-index: 2;
+  filter: drop-shadow(0 35px 70px rgba(5, 7, 20, 0.65));
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+
 .intro-screen__background {
   position: absolute;
   inset: 0;
@@ -220,6 +230,11 @@ body {
 
 .app--enter {
   animation: appZoomIn 0.7s ease forwards;
+}
+
+.app--preload {
+  opacity: 0;
+  pointer-events: none;
 }
 
 @keyframes appZoomIn {
@@ -383,6 +398,16 @@ body {
   outline: none;
   border-color: rgba(192, 132, 252, 0.8);
   box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.2);
+}
+
+.select-wrapper--compact::after {
+  right: 14px;
+}
+
+.select-wrapper--compact select {
+  min-width: 220px;
+  padding: 12px 38px 12px 16px;
+  font-size: 0.95rem;
 }
 
 .form-actions {
@@ -1875,6 +1900,25 @@ body {
 .ai-card__error {
   font-size: 0.9rem;
   color: rgba(248, 113, 113, 0.95);
+}
+
+.ai-card__tone-control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 220px;
+}
+
+.ai-card__tone-label {
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.8);
+}
+
+.ai-card__tone-description {
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.75);
 }
 
 @keyframes spin {

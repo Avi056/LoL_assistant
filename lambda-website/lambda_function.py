@@ -644,7 +644,37 @@ def _build_bedrock_body(model_id: str, prompt: str) -> Dict[str, Any]:
         },
     }
 
-def _generate_ai_feedback(stats_context: Dict[str, Any]) -> Dict[str, Any]:
+DEFAULT_FEEDBACK_TONE = "roast"
+
+AI_FEEDBACK_TONE_PROMPTS = {
+    "roast": (
+        "Given the JSON of League of Legends stats, deliver an over-the-top roast."
+        " Go hard on the mistakes with absurd metaphors, relentless sarcasm, and witty burns."
+        " Stay funny, a little unhinged, and make it feel like a highlight from a comedy roast battle."
+        " Respond in two punchy paragraphs totalling roughly 15 sentences."
+    ),
+    "constructive": (
+        "Given the JSON of League of Legends stats, provide direct yet constructive coaching."
+        " Balance praise with critique, outline the biggest leaks in their gameplay, and give actionable fixes."
+        " Keep the tone like an esports analyst who wants them to improve fast."
+        " Respond in two paragraphs."
+    ),
+    "hype": (
+        "Given the JSON of League of Legends stats, respond like an over-the-top hype caster."
+        " Celebrate every decent metric, reframe flaws as comeback fuel, and keep the compliments flowing."
+        " Use energetic language, callbacks to pro-play moments, and leave them confident."
+        " Two paragraphs max."
+    ),
+    "friend": (
+        "Given the JSON of League of Legends stats, respond like a supportive friend after a tough ranked session."
+        " Be empathetic, encouraging, and gently honest about improvements."
+        " Highlight one or two actionable tips but keep the priority on emotional support and motivation."
+        " Two paragraphs, conversational tone."
+    ),
+}
+
+
+def _generate_ai_feedback(stats_context: Dict[str, Any], prompt_style: Optional[str] = None) -> Dict[str, Any]:
     """Generate AI feedback using Amazon Bedrock (supports Anthropic + AI21)."""
 
     print("🟦 Entered _generate_ai_feedback()")
@@ -669,16 +699,11 @@ def _generate_ai_feedback(stats_context: Dict[str, Any]) -> Dict[str, Any]:
 
         # Build prompt
         stats_json = json.dumps(stats_context, ensure_ascii=False, indent=2)
-        prompt = (
-            "Given the JSON of LoL stats, brutally roast the player."
-            "Include obscure metaphors like penguinz0."
-            "Around 15 sentences. Two paragraphs"
-            "Monotonous tone roast upon roasts."
-            "Use words like wacky, absurd, goofy, silly, bizarre, ridiculous, ludicrous."
-            "Make it similar to this: "
-            "\n\n"
-            f"Stats JSON:\n{stats_json}"
+        tone_key = (prompt_style or DEFAULT_FEEDBACK_TONE).lower()
+        instructions = AI_FEEDBACK_TONE_PROMPTS.get(
+            tone_key, AI_FEEDBACK_TONE_PROMPTS[DEFAULT_FEEDBACK_TONE]
         )
+        prompt = f"{instructions}\n\nStats JSON:\n{stats_json}"
 
         # Build model-specific payload
         body = _build_bedrock_body(BEDROCK_MODEL_ID, prompt)
@@ -740,7 +765,8 @@ def lambda_handler(event, context):
 
         if body.get("mode") == "ai-feedback":
             stats_context = body.get("stats") or {}
-            ai_feedback = _generate_ai_feedback(stats_context)
+            prompt_style = body.get("promptStyle")
+            ai_feedback = _generate_ai_feedback(stats_context, prompt_style)
             return _build_response(event, 200, {"aiFeedback": ai_feedback})
 
         game_name = (body.get("game_name") or "").strip() or "Faker"
