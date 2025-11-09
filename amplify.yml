@@ -9,7 +9,6 @@ applications:
         build:
           commands:
             - npm run build
-            - ../scripts/deploy_lambda.sh
       artifacts:
         baseDirectory: build   
         files:
