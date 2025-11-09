@@ -554,6 +554,162 @@ def _build_ai_stats_context(
     }
 
 
+# def _get_bedrock_client():
+#     """Return or initialize a Bedrock client using boto3."""
+#     global _bedrock_client
+#     if _bedrock_client is None and ENABLE_BEDROCK and boto3:
+#         _bedrock_client = boto3.client(
+#             service_name="bedrock-runtime",
+#             region_name=BEDROCK_REGION,
+#         )
+#     return _bedrock_client
+
+
+# def _render_bedrock_content(response_json: Dict[str, Any]) -> str:
+#     """Extract text output from various Bedrock model formats."""
+
+#     if isinstance(response_json, dict):
+#         # Anthropic responses (messages -> content[] -> text)
+#         if "content" in response_json and isinstance(response_json["content"], list):
+#             parts = []
+#             for item in response_json["content"]:
+#                 if isinstance(item, dict) and "text" in item:
+#                     parts.append(item["text"])
+#             if parts:
+#                 return "".join(parts).strip()
+
+#         # AI21 Jamba responses use "outputs" or "output_text"
+#         outputs = response_json.get("outputs")
+#         if isinstance(outputs, list):
+#             jamba_parts: List[str] = []
+#             for output in outputs:
+#                 if isinstance(output, dict):
+#                     text = output.get("text") or output.get("output_text")
+#                     if text:
+#                         jamba_parts.append(str(text))
+#             if jamba_parts:
+#                 return "".join(jamba_parts).strip()
+
+#         if "output_text" in response_json:
+#             return str(response_json["output_text"]).strip()
+#         if "text" in response_json and isinstance(response_json["text"], str):
+#             return response_json["text"].strip()
+#         if "completion" in response_json:
+#             return str(response_json["completion"]).strip()
+#         if "message" in response_json:
+#             return str(response_json["message"]).strip()
+
+#     # Default fallback
+#     return str(response_json).strip()
+
+
+# def _build_bedrock_body(model_id: str, prompt: str) -> Dict[str, Any]:
+#     """Create a request body compatible with the configured Bedrock model."""
+
+#     model_id_lower = (model_id or "").lower()
+
+#     if model_id_lower.startswith("anthropic."):
+#         return {
+#             "anthropic_version": "bedrock-2023-05-31",
+#             "max_tokens": 600,
+#             "temperature": 0.6,
+#             "top_k": 250,
+#             "top_p": 1,
+#             "messages": [
+#                 {
+#                     "role": "user",
+#                     "content": [{"type": "text", "text": prompt}],
+#                 }
+#             ],
+#         }
+
+#     if model_id_lower.startswith("ai21."):
+#         return {
+#             "input_text": prompt,
+#             "parameters": {
+#                 "max_output_tokens": 600,
+#                 "temperature": 0.6,
+#                 "top_p": 0.9,
+#                 "stop_sequences": [],
+#             },
+#         }
+
+#     # Generic text generation fallback (Titan / others)
+#     return {
+#         "inputText": prompt,
+#         "textGenerationConfig": {
+#             "maxTokenCount": 600,
+#             "temperature": 0.6,
+#             "topP": 0.9,
+#         },
+#     }
+
+# def _generate_ai_feedback(stats_context: Dict[str, Any]) -> Dict[str, Any]:
+#     """Generate AI feedback using Amazon Bedrock (supports Anthropic + AI21)."""
+
+#     print("🟦 Entered _generate_ai_feedback()")
+
+#     if not ENABLE_BEDROCK:
+#         print("❌ Bedrock disabled via config.")
+#         return {"message": "", "modelId": None, "error": "Amazon Bedrock integration disabled."}
+
+#     if not boto3:
+#         print("❌ boto3 not available in environment.")
+#         return {"message": "", "modelId": BEDROCK_MODEL_ID, "error": "boto3 not available."}
+
+#     if not stats_context:
+#         print("⚠️  No stats provided for AI feedback.")
+#         return {"message": "", "modelId": BEDROCK_MODEL_ID, "error": "Empty stats context."}
+
+#     try:
+#         bedrock = _get_bedrock_client()
+#         if bedrock is None:
+#             raise RuntimeError("Unable to initialize Bedrock client.")
+#         print("✅ Bedrock client initialized successfully.")
+
+#         # Build prompt
+#         stats_json = json.dumps(stats_context, ensure_ascii=False, indent=2)
+#         prompt = (
+#             "Given the JSON of LoL stats, brutally roast the player."
+#             "Include obscure metaphors like penguinz0."
+#             "Around 15 sentences."
+#             "Monotonous tone roast upon roasts."
+#             "Make it similar to this: "
+#             "\n\n"
+#             f"Stats JSON:\n{stats_json}"
+#         )
+
+#         # Build model-specific payload
+#         body = _build_bedrock_body(BEDROCK_MODEL_ID, prompt)
+
+#         response = bedrock.invoke_model(
+#             modelId=BEDROCK_MODEL_ID,
+#             contentType="application/json",
+#             accept="application/json",
+#             body=json.dumps(body),
+#         )
+
+#         # Read response body
+#         raw_body = response.get("body")
+#         if hasattr(raw_body, "read"):
+#             raw_body = raw_body.read()
+
+#         payload = json.loads(raw_body)
+#         print("🧩 Bedrock response preview:", json.dumps(payload, indent=2)[:600])
+
+#         # Use robust renderer
+#         message = _render_bedrock_content(payload)
+
+#         if not message:
+#             print("⚠️  Bedrock returned empty message.")
+#             return {"message": "", "modelId": BEDROCK_MODEL_ID, "error": "Bedrock returned no content."}
+
+#         print("✅ Final message extracted:", message[:400] + " ...")
+#         return {"message": message.strip(), "modelId": BEDROCK_MODEL_ID, "error": None}
+
+#     except Exception as e:
+#         print("❌ Exception during Bedrock call:", repr(e))
+#         return {"message": "", "modelId": BEDROCK_MODEL_ID, "error": str(e)}
 def _get_bedrock_client():
     """Return or initialize a Bedrock client using boto3."""
     global _bedrock_client
@@ -566,48 +722,84 @@ def _get_bedrock_client():
 
 
 def _render_bedrock_content(response_json: Dict[str, Any]) -> str:
-    """Extract text output from various Bedrock model formats."""
+    """Extract text output from various Bedrock model formats (Claude, Jamba, others)."""
 
-    if isinstance(response_json, dict):
-        # Anthropic responses (messages -> content[] -> text)
-        if "content" in response_json and isinstance(response_json["content"], list):
-            parts = []
-            for item in response_json["content"]:
-                if isinstance(item, dict) and "text" in item:
-                    parts.append(item["text"])
-            if parts:
-                return "".join(parts).strip()
+    if not isinstance(response_json, dict):
+        return str(response_json).strip()
 
-        # AI21 Jamba responses use "outputs" or "output_text"
-        outputs = response_json.get("outputs")
-        if isinstance(outputs, list):
-            jamba_parts: List[str] = []
-            for output in outputs:
-                if isinstance(output, dict):
-                    text = output.get("text") or output.get("output_text")
-                    if text:
-                        jamba_parts.append(str(text))
-            if jamba_parts:
-                return "".join(jamba_parts).strip()
+    # 1) Anthropic-style: top-level content: [ { "text": ... }, ... ]
+    if "content" in response_json and isinstance(response_json["content"], list):
+        parts = []
+        for item in response_json["content"]:
+            if isinstance(item, dict) and "text" in item:
+                parts.append(str(item["text"]))
+        if parts:
+            return "".join(parts).strip()
 
-        if "output_text" in response_json:
-            return str(response_json["output_text"]).strip()
-        if "text" in response_json and isinstance(response_json["text"], str):
-            return response_json["text"].strip()
-        if "completion" in response_json:
-            return str(response_json["completion"]).strip()
-        if "message" in response_json:
-            return str(response_json["message"]).strip()
+    # 2) Chat-completions style (used by Jamba & others): choices[].message.content
+    choices = response_json.get("choices")
+    if isinstance(choices, list) and choices:
+        pieces: List[str] = []
+        for choice in choices:
+            if not isinstance(choice, dict):
+                continue
+            message = choice.get("message") or {}
+            # Common: {"role": "assistant", "content": "text..."}
+            if isinstance(message, dict):
+                content = message.get("content")
+                if isinstance(content, str):
+                    pieces.append(content)
+                elif isinstance(content, list):
+                    # Some providers nest [{ "text": "..." }]
+                    for part in content:
+                        if isinstance(part, dict) and "text" in part:
+                            pieces.append(str(part["text"]))
+            # Fallback: some variants put text directly on the choice
+            if isinstance(choice.get("text"), str):
+                pieces.append(choice["text"])
+        if pieces:
+            return "".join(pieces).strip()
 
-    # Default fallback
-    return str(response_json).strip()
+    # 3) Older / alt AI21-style: "outputs": [ { "text" or "output_text": ... }, ... ]
+    outputs = response_json.get("outputs")
+    if isinstance(outputs, list):
+        jamba_parts: List[str] = []
+        for output in outputs:
+            if isinstance(output, dict):
+                text = output.get("text") or output.get("output_text")
+                if text:
+                    jamba_parts.append(str(text))
+        if jamba_parts:
+            return "".join(jamba_parts).strip()
+
+    # 4) Generic single-field fallbacks
+    if "output_text" in response_json:
+        return str(response_json["output_text"]).strip()
+    if isinstance(response_json.get("text"), str):
+        return response_json["text"].strip()
+    if "completion" in response_json:
+        return str(response_json["completion"]).strip()
+    if "message" in response_json:
+        return str(response_json["message"]).strip()
+
+    # 5) Last resort
+    return json.dumps(response_json).strip()
 
 
 def _build_bedrock_body(model_id: str, prompt: str) -> Dict[str, Any]:
-    """Create a request body compatible with the configured Bedrock model."""
+    """
+    Create a request body compatible with the configured Bedrock model.
+
+    Supports:
+    - Anthropic Claude via messages API
+    - AI21 Jamba (Jamba-Instruct, Jamba 1.5) via messages[]
+    - Legacy AI21 (e.g. Jurassic-2) via input_text
+    - Titan/others via generic textGenerationConfig
+    """
 
     model_id_lower = (model_id or "").lower()
 
+    # ---------- Anthropic Claude ----------
     if model_id_lower.startswith("anthropic."):
         return {
             "anthropic_version": "bedrock-2023-05-31",
@@ -618,11 +810,39 @@ def _build_bedrock_body(model_id: str, prompt: str) -> Dict[str, Any]:
             "messages": [
                 {
                     "role": "user",
-                    "content": [{"type": "text", "text": prompt}],
+                    "content": [
+                        {"type": "text", "text": prompt},
+                    ],
                 }
             ],
         }
 
+    # ---------- AI21 Jamba (Jamba-Instruct, Jamba 1.5) ----------
+    # Examples: ai21.jamba-instruct-v1:0, ai21.jamba-1-5-large-v1:0, ai21.jamba-1-5-mini-v1:0
+    if model_id_lower.startswith("ai21.jamba"):
+        return {
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a savage, relentless roasting assistant. "
+                        "You respond in a monotone wall of roast, in the style of penguinz0, "
+                        "no empathy, no encouragement."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": prompt,
+                },
+            ],
+            "max_tokens": 600,
+            "temperature": 0.6,
+            "top_p": 0.9,
+            "n": 1,
+            # "stop": []  # optional; add if you want custom stopping
+        }
+
+    # ---------- Legacy AI21 models (e.g. Jurassic-2) ----------
     if model_id_lower.startswith("ai21."):
         return {
             "input_text": prompt,
@@ -634,7 +854,7 @@ def _build_bedrock_body(model_id: str, prompt: str) -> Dict[str, Any]:
             },
         }
 
-    # Generic text generation fallback (Titan / others)
+    # ---------- Generic Titan / others ----------
     return {
         "inputText": prompt,
         "textGenerationConfig": {
@@ -644,8 +864,9 @@ def _build_bedrock_body(model_id: str, prompt: str) -> Dict[str, Any]:
         },
     }
 
+
 def _generate_ai_feedback(stats_context: Dict[str, Any]) -> Dict[str, Any]:
-    """Generate AI feedback using Amazon Bedrock (supports Anthropic + AI21)."""
+    """Generate AI feedback using Amazon Bedrock (Claude, Jamba, etc.)."""
 
     print("🟦 Entered _generate_ai_feedback()")
 
@@ -670,11 +891,9 @@ def _generate_ai_feedback(stats_context: Dict[str, Any]) -> Dict[str, Any]:
         # Build prompt
         stats_json = json.dumps(stats_context, ensure_ascii=False, indent=2)
         prompt = (
-            "Given the JSON of LoL stats, brutally roast the player."
-            "Include obscure metaphors like penguinz0."
-            "Around 15 sentences."
-            "Monotonous tone roast upon roasts."
-            "\n\n"
+            "Given the JSON of LoL stats, brutally roast the player. "
+            "Use unhinged, obscure metaphors like penguinz0. "
+            "Around 15 sentences, one relentless block of text, no positivity.\n\n"
             f"Stats JSON:\n{stats_json}"
         )
 
@@ -692,11 +911,12 @@ def _generate_ai_feedback(stats_context: Dict[str, Any]) -> Dict[str, Any]:
         raw_body = response.get("body")
         if hasattr(raw_body, "read"):
             raw_body = raw_body.read()
+        if isinstance(raw_body, (bytes, bytearray)):
+            raw_body = raw_body.decode("utf-8")
 
         payload = json.loads(raw_body)
         print("🧩 Bedrock response preview:", json.dumps(payload, indent=2)[:600])
 
-        # Use robust renderer
         message = _render_bedrock_content(payload)
 
         if not message:
