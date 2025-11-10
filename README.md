@@ -33,9 +33,9 @@
 
 ## Screenshots
 
-![Demo1](./assets/Demo1.png)  
-![Demo2](./assets/Demo2.png)  
-![Demo3](./assets/Demo3.png)  
+![Demo1](./lolwebapp/public/assets/Demo1.png)  
+![Demo2](./lolwebapp/public/assets/Demo2.png)  
+![Demo3](./lolwebapp/public/assets/Demo3.png)  
 
 ---
 
