@@ -304,33 +304,81 @@ const parseKdaRatio = (kdaLabel) => {
   return Number.isFinite(numeric) ? numeric : null;
 };
 
+// const getMatchTrashTalk = (match) => {
+//   if (!match) return "";
+//   const ratio = parseKdaRatio(match.kda);
+//   const isWin = String(match.result || "").toLowerCase() === "win";
+//   const ratioLabel = Number.isFinite(ratio) ? `${ratio.toFixed(1)}` : "???";
+//   const champ = match.champion || "that pick";
+//   const role = (match.role || "role").toLowerCase();
+//   const seed =
+//     sumCharCodes(match.id || "") +
+//     sumCharCodes(champ) +
+//     (Number.isFinite(ratio) ? Math.round(ratio * 10) : 0);
+//   const pickTemplate = (templates) =>
+//     templates[Math.abs(seed) % templates.length];
+
+//   const context = { champ, ratioLabel, role };
+//   const lowKda = Number.isFinite(ratio) ? ratio < 2.0 : false;
+//   const goodGame = isWin && Number.isFinite(ratio) && ratio >= 3.2;
+
+//   if (!isWin || lowKda) {
+//     return pickTemplate(LOSS_ROAST_TEMPLATES)(context);
+//   }
+
+//   if (goodGame) {
+//     return pickTemplate(LUCK_TAUNT_TEMPLATES)(context);
+//   }
+
+//   return pickTemplate(BORING_WIN_TEMPLATES)(context);
+// };
+
+const usedTemplates = {
+  loss: new Set(),
+  luck: new Set(),
+  boring: new Set(),
+};
+
+const pickTemplateNoRepeat = (templates, seed, category) => {
+  const availableIndices = templates
+    .map((_, i) => i)
+    .filter((i) => !usedTemplates[category].has(i));
+
+  // If all templates have been used, reset
+  if (!availableIndices.length) usedTemplates[category].clear();
+
+  const index = availableIndices[Math.abs(seed) % availableIndices.length];
+  usedTemplates[category].add(index);
+  return templates[index];
+};
+
 const getMatchTrashTalk = (match) => {
   if (!match) return "";
+
   const ratio = parseKdaRatio(match.kda);
   const isWin = String(match.result || "").toLowerCase() === "win";
   const ratioLabel = Number.isFinite(ratio) ? `${ratio.toFixed(1)}` : "???";
   const champ = match.champion || "that pick";
   const role = (match.role || "role").toLowerCase();
+
   const seed =
     sumCharCodes(match.id || "") +
     sumCharCodes(champ) +
     (Number.isFinite(ratio) ? Math.round(ratio * 10) : 0);
-  const pickTemplate = (templates) =>
-    templates[Math.abs(seed) % templates.length];
 
   const context = { champ, ratioLabel, role };
   const lowKda = Number.isFinite(ratio) ? ratio < 2.0 : false;
   const goodGame = isWin && Number.isFinite(ratio) && ratio >= 3.2;
 
   if (!isWin || lowKda) {
-    return pickTemplate(LOSS_ROAST_TEMPLATES)(context);
+    return pickTemplateNoRepeat(LOSS_ROAST_TEMPLATES, seed, "loss")(context);
   }
 
   if (goodGame) {
-    return pickTemplate(LUCK_TAUNT_TEMPLATES)(context);
+    return pickTemplateNoRepeat(LUCK_TAUNT_TEMPLATES, seed, "luck")(context);
   }
 
-  return pickTemplate(BORING_WIN_TEMPLATES)(context);
+  return pickTemplateNoRepeat(BORING_WIN_TEMPLATES, seed, "boring")(context);
 };
 
 const copyTextToClipboard = async (text) => {
