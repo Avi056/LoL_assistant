@@ -7,7 +7,7 @@
 ## Table of Contents
 
 - [Features](#features)  
-- [Demo](#demo)  
+- [Screenshots](#screenshots)  
 - [Tech Stack](#tech-stack)  
 - [Getting Started](#getting-started)  
   - [Prerequisites](#prerequisites)  
