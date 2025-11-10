@@ -151,11 +151,9 @@ const buildShareSummary = (recap, winRate, kdaRatio) => {
     `🎮 ${recap.summoner}'s Recap`,
     `🏆 ${wins}W / ${losses}L (${winRate.toFixed(1)}% WR)`,
     `💀 ${kdaRatio.toFixed(2)} KDA · ${recap.kda.csPerMin} CS/min · ${recap.kda.goldPerMin} GPM`,
-    `🔍 Focus: ${recap.trendFocus}`,
     `🤩 Highlight: ${signaturePlay}`,
     "",
-    "📡 Every stat is sourced directly from Riot APIs.",
-    `Check yours: ${APP_SHARE_URL}`
+    `📡 Check yours: ${APP_SHARE_URL}`
   ].join("\n");
 };
 
