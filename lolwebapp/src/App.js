@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
+import logo from "./assets/LoLLogo.webp";
 
 const buildPublicAssetUrl = (fileName) => {
   const base = process.env.PUBLIC_URL ?? "";
@@ -637,6 +638,20 @@ const PieChart = ({
 };
 
 function App() {
+  useEffect(() => {
+  // Set the page title
+  document.title = "League Recap | Riot Insights";
+
+  // Set the favicon dynamically
+  let link = document.querySelector("link[rel~='icon']");
+  if (!link) {
+    link = document.createElement("link");
+    link.rel = "icon";
+    document.head.appendChild(link);
+  }
+  link.href = logo; // or "/favicon.png" if it's in public/
+}, []);
+
   const [gameName, setGameName] = useState("");
   const [tagLine, setTagLine] = useState("");
   const [region, setRegion] = useState(REGION_OPTIONS[0].value);
