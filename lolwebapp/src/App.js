@@ -197,6 +197,20 @@ const LOSS_ROAST_TEMPLATES = [
     `${champ} ${role} tech? More like a live tutorial on how to run it down.`,
   ({ ratioLabel }) =>
     `${ratioLabel} is the kind of stat that makes Riot investigate intentional feeding.`,
+  ({ champ, role }) =>
+    `${champ} in ${role}? More like a live demonstration of how not to play.`,
+  ({ champ, ratioLabel }) =>
+    `${champ}'s ${ratioLabel} KDA is proof that minions have better aim.`,
+  ({ champ }) =>
+    `If ${champ} were any slower, the game would have ended before you did anything.`,
+  ({ champ, role }) =>
+    `Watching ${champ} as a ${role} was like watching paint dry… in bronze.`,
+  ({ ratioLabel }) =>
+    `Your ${ratioLabel} KDA is a tragic story that deserves its own cinematic.`,
+  ({ champ }) =>
+    `${champ} might as well have been AFK. Your team carried ghosts today.`,
+  ({ champ, role }) =>
+    `Legend says ${champ} ${role} is still trying to find the enemy Nexus… maybe try a map next time.`,
 ];
 
 const LUCK_TAUNT_TEMPLATES = [
@@ -212,6 +226,26 @@ const LUCK_TAUNT_TEMPLATES = [
     `Even ${champ} looked confused that Riot marked that as a victory.`,
   ({ ratioLabel }) =>
     `${ratioLabel} KDA? Sure, but the enemy jungler clearly DC'd.`,
+  ({ champ, ratioLabel }) =>
+    `${champ} lucked out with ${ratioLabel} KDA—try not to let it inflate your ego.`,
+  ({ champ }) =>
+    `That win with ${champ}? Must have been the universe taking a day off.`,
+  ({ champ, ratioLabel }) =>
+    `Congrats on the ${champ} win! ${ratioLabel} KDA just proves luck > skill.`,
+  ({ champ }) =>
+    `If ${champ} can win like that, maybe bots are teaching humans how to play.`,
+  ({ ratioLabel }) =>
+    `${ratioLabel} KDA? The enemy team probably played blindfolded.`,
+  ({ champ }) =>
+    `Riot must have been trolling to give ${champ} that W—honestly, luck carried you.`,
+  ({ champ, ratioLabel }) =>
+    `Don’t let that ${champ} win fool you. ${ratioLabel} KDA is a one-time miracle.`,
+  ({ champ }) =>
+    `Even your champion looked surprised that you somehow won.`,
+  ({ champ, ratioLabel }) =>
+    `The stats say ${champ} with ${ratioLabel} KDA, but we all know Lady Luck did the heavy lifting.`,
+  ({ champ }) =>
+    `Enjoy that ${champ} victory—it’s the kind of luck that makes history books… for comedy.`,
 ];
 
 const BORING_WIN_TEMPLATES = [
@@ -226,6 +260,24 @@ const BORING_WIN_TEMPLATES = [
     `Calling that a clutch would be illegal advertising. ${ratioLabel} KDA just looks padded.`,
   () =>
     `Next time try pressing more than two buttons before flexing that scoreboard.`,
+  ({ champ }) =>
+    `${champ} popped off? Nah, the real MVP was literally anyone else on your team.`,
+  ({ ratioLabel }) =>
+    `${ratioLabel} KDA, and yet you somehow played like a background character.`,
+  ({ champ }) =>
+    `Congrats on the ${champ} win… you made watching paint dry look exciting.`,
+  ({ champ, ratioLabel }) =>
+    `That ${champ} victory with ${ratioLabel} KDA? You basically carried your chair to the Nexus.`,
+  () =>
+    `If effort was LP, you’d be in silver, not bronze pretending to flex.`,
+  ({ champ }) =>
+    `${champ} may have won, but your gameplay was the tutorial on how to AFK efficiently.`,
+  ({ ratioLabel }) =>
+    `With ${ratioLabel} KDA, you’re the human equivalent of auto-attack spam.`,
+  ({ champ }) =>
+    `Your ${champ} “win” is the reason we can’t have nice things in solo queue.`,
+  () =>
+    `Next queue, maybe try being less of a spectator and more of a participant.`,
 ];
 
 const sumCharCodes = (value = "") =>
@@ -649,8 +701,11 @@ function App() {
     link.rel = "icon";
     document.head.appendChild(link);
   }
-  link.href = logo; // or "/favicon.png" if it's in public/
+
+  link.type = "image/png"; // <-- Add this
+  link.href = logo; // imported path from "./assets/LoLLogo.png"
 }, []);
+
 
   const [gameName, setGameName] = useState("");
   const [tagLine, setTagLine] = useState("");
