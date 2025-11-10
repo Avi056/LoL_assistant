@@ -31,12 +31,11 @@
 
 ---
 
-## Demo
+## Screenshots
 
-Include screenshots or GIFs here:
-
-![LoL Recap Form](./assets/form-screenshot.png)  
-![LoL Recap Output](./assets/recap-screenshot.png)  
+![Demo1](./assets/Demo1.png)  
+![Demo2](./assets/Demo2.png)  
+![Demo3](./assets/Demo3.png)  
 
 ---
 
