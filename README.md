@@ -9,16 +9,6 @@
 - [Features](#features)  
 - [Screenshots](#screenshots)  
 - [Tech Stack](#tech-stack)  
-- [Getting Started](#getting-started)  
-  - [Prerequisites](#prerequisites)  
-  - [Installation](#installation)  
-  - [Environment Variables](#environment-variables)  
-  - [Running the App](#running-the-app)  
-- [Architecture](#architecture)  
-- [Usage](#usage)  
-- [Contributing](#contributing)  
-- [License](#license)  
-
 ---
 
 ## Features
@@ -48,23 +38,3 @@
 - **Auth & Permissions:** AWS IAM  
 
 ---
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js (v18+)  
-- npm or yarn  
-- AWS account with access to Bedrock, Lambda, and Amplify  
-
----
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/lol-recap.git
-cd lol-recap
-
-# Install dependencies
-npm install
