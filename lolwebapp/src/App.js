@@ -1059,7 +1059,7 @@ function App() {
     ? FEEDBACK_PROGRESS[
         Math.min(feedbackMessageIndex, FEEDBACK_PROGRESS.length - 1)
       ]
-    : "Generate Feedback";
+    : "Generate 'Feedback'";
 
   const handleSubmit = async (event) => {
     event.preventDefault();
