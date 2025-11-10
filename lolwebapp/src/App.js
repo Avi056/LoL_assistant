@@ -148,7 +148,6 @@ const buildShareSummary = (recap, winRate, kdaRatio) => {
     : "Queue up to log fresh wins.";
 
   return [
-    `Here's my League of Legends Recap!`,
     `🎮 ${recap.summoner}'s Recap`,
     `🏆 ${wins}W / ${losses}L (${winRate.toFixed(1)}% WR)`,
     `💀 ${kdaRatio.toFixed(2)} KDA · ${recap.kda.csPerMin} CS/min · ${recap.kda.goldPerMin} GPM`,
