@@ -1,11 +1,71 @@
-# LoL_assistant
+# LoL Recap
 
-## CI/CD deployment
+**LoL Recap** is a web application that generates personalized League of Legends match and season recaps for players. Leveraging AWS Bedrock for AI-powered text generation, the app provides insightful summaries of gameplay performance in natural language.  
 
-Amplify now runs `scripts/deploy_lambda.sh` after building the React app.  
-Set the following environment variables in the Amplify console (per branch/environment) so the script can update the backend Lambda:
+---
 
-- `LAMBDA_FUNCTION_NAME` – the AWS Lambda function that powers `/matches`.
-- `AWS_REGION` (optional) – defaults to `us-east-1` if omitted.
+## Table of Contents
 
-The script rebuilds `lambda-website/function.zip` from the vendored Python sources and calls `aws lambda update-function-code --publish`, so every successful build publishes the latest lambda alongside the web assets.
+- [Features](#features)  
+- [Demo](#demo)  
+- [Tech Stack](#tech-stack)  
+- [Getting Started](#getting-started)  
+  - [Prerequisites](#prerequisites)  
+  - [Installation](#installation)  
+  - [Environment Variables](#environment-variables)  
+  - [Running the App](#running-the-app)  
+- [Architecture](#architecture)  
+- [Usage](#usage)  
+- [Contributing](#contributing)  
+- [License](#license)  
+
+---
+
+## Features
+
+- Generate detailed recaps of League of Legends matches or seasonal performance.  
+- AI-powered natural language summaries using **AWS Bedrock** foundation models.  
+- User-friendly form interface with **React + Amplify**.  
+- Secure API calls using **AWS Lambda** and **IAM authorizers**.  
+- Dynamic views: form input, recap display, and error handling.  
+
+---
+
+## Demo
+
+Include screenshots or GIFs here:
+
+![LoL Recap Form](./assets/form-screenshot.png)  
+![LoL Recap Output](./assets/recap-screenshot.png)  
+
+---
+
+## Tech Stack
+
+- **Frontend:** React, AWS Amplify  
+- **Backend:** AWS Lambda, API Gateway  
+- **AI:** AWS Bedrock (Anthropic Claude, Meta models)  
+- **Hosting/CI:** AWS Amplify Hosting  
+- **Auth & Permissions:** AWS IAM  
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v18+)  
+- npm or yarn  
+- AWS account with access to Bedrock, Lambda, and Amplify  
+
+---
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/lol-recap.git
+cd lol-recap
+
+# Install dependencies
+npm install
