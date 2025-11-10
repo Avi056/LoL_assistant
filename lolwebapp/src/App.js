@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
-import logo from "./assets/LoLLogo.webp";
+import logo from "./assets/LoLLogo.png";
 
 const buildPublicAssetUrl = (fileName) => {
   const base = process.env.PUBLIC_URL ?? "";
@@ -640,7 +640,7 @@ const PieChart = ({
 function App() {
   useEffect(() => {
   // Set the page title
-  document.title = "League Recap | Riot Insights";
+  document.title = "LoL Recap";
 
   // Set the favicon dynamically
   let link = document.querySelector("link[rel~='icon']");
