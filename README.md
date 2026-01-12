@@ -1,5 +1,7 @@
 # LoL Recap
 
+Link to application: https://main.dmmttg0yma1yv.amplifyapp.com
+
 **LoL Recap** is a web application that generates personalized League of Legends match and season recaps for players. Leveraging AWS Bedrock for AI-powered text generation, the app provides insightful summaries of gameplay performance in natural language.  
 
 ---
