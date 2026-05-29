@@ -1426,7 +1426,7 @@ function App() {
                     {feedbackButtonText}
                   </button>
                   <span className="ai-card__hint">
-                    Powered by Amazon Bedrock (Claude 3 Haiku) and fresh Riot
+                    Powered by Amazon Bedrock (Claude 3.5 Haiku) and fresh Riot
                     API data.
                   </span>
                   {aiError && <span className="ai-card__error">{aiError}</span>}
