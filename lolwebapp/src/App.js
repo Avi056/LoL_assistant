@@ -1326,7 +1326,7 @@ function App() {
                     <input
                       id="riot-name"
                       type="text"
-                      placeholder="Summoner (e.g. Faker)"
+                      placeholder="Summoner (e.g. HideonBush)"
                       value={gameName}
                       onChange={(event) => setGameName(event.target.value)}
                       required
