@@ -1662,6 +1662,143 @@ body {
   line-height: 1.5;
 }
 
+.compare-card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 28px 32px;
+  border-radius: 30px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.compare-card__intro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.compare-card__intro h2 {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.2vw, 1.7rem);
+}
+
+.compare-card__intro p {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.compare-card__legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.8);
+}
+
+.compare-card__legend strong {
+  color: rgba(248, 250, 252, 0.95);
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 1rem;
+}
+
+.compare-card__form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.compare-card__fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
+.compare-card__field {
+  flex: 1 1 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.compare-card__field--region {
+  flex: 0 1 240px;
+}
+
+.compare-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.compare-card__error {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  color: #fecaca;
+  font-size: 0.9rem;
+}
+
+.compare-card__results {
+  border-top: 1px solid rgba(148, 163, 184, 0.25);
+  padding-top: 20px;
+}
+
+.compare-card__status {
+  margin: 0 0 14px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.compare-card__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.compare-card__table thead th {
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.75);
+  padding: 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.compare-card__table tbody td {
+  padding: 12px 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.compare-card__table td:first-child {
+  color: rgba(226, 232, 240, 0.85);
+  font-weight: 500;
+}
+
+.compare-card__value {
+  font-weight: 600;
+  color: rgba(248, 250, 252, 0.95);
+}
+
+.compare-card__value--better {
+  color: #34d399;
+}
+
+.compare-card__value--worse {
+  color: #f87171;
+}
+
 .share-card {
   display: flex;
   flex-wrap: wrap;
@@ -1942,6 +2079,14 @@ body {
     align-items: flex-start;
   }
 
+  .compare-card__intro {
+    flex-direction: column;
+  }
+
+  .compare-card__legend {
+    align-self: flex-start;
+  }
+
   .share-card__buttons {
     width: 100%;
   }
@@ -1963,6 +2108,19 @@ body {
 
   .recap {
     padding: 36px 24px;
+  }
+
+  .compare-card {
+    padding: 24px;
+  }
+
+  .compare-card__fields {
+    flex-direction: column;
+  }
+
+  .compare-card__field,
+  .compare-card__field--region {
+    flex: 1 1 auto;
   }
 
   .stat-grid {
@@ -2014,6 +2172,12 @@ body {
 
   .share-card__actions {
     width: 100%;
+  }
+
+  .compare-card__legend {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
   }
 
   .share-card__actions .primary-button {
